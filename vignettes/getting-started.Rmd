@@ -138,6 +138,32 @@ stability$details$failures
 stability$details$warnings
 ```
 
+Refits use the original variables after aligning them to the observations that
+the fitted model retained. Transformations are therefore reevaluated inside each
+resample rather than treated as precomputed columns:
+
+```{r transformed-stability}
+transformed_model <- lm(mpg ~ log(wt), data = mtcars)
+transformed_stability <- expect_stable_direction(
+  transformed_model,
+  term = "log(wt)",
+  method = "bootstrap",
+  iterations = 20,
+  minimum_proportion = 0.8,
+  seed = 2026
+)
+transformed_stability
+```
+
+Named data frames and row-filtering `base::subset()` expressions are recovered
+automatically. Calls that produce data through other functions are deliberately
+not reevaluated during stability checks; assign such a result to a named data
+frame before fitting. This restriction prevents refitting from executing an
+arbitrary data-producing call stored in a model object.
+
+Models fit with `model = FALSE` are not eligible for refitting because they do
+not retain the model frame needed to identify the observations actually used.
+
 Bootstrap refits of a `glm` that do not converge are recorded as failures. A
 non-converged original `glm` is rejected before any claim is evaluated;
 claimtestR does not repair or reinterpret that model. When `seed` is supplied,

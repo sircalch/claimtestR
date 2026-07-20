@@ -96,6 +96,15 @@ failure classes/messages and captured warnings. Bootstrap sampling remains
 reproducible with `seed`, while the caller's random-number state is restored on
 exit.
 
+For `lm` and `glm` refits, claimtestR recovers the named original data and then
+keeps exactly the rows used by the fitted model. This allows formulas such as
+`mpg ~ log(wt)`, `log(mpg) ~ wt`, `mpg ~ I(wt^2)`, interactions, and `poly()`
+terms to be reevaluated for each resample. A row-filtering `base::subset()` data
+expression is also supported. Other data-producing calls are not executed
+automatically; assign their result to a named data frame before fitting. Model
+resampling also requires the default `model = TRUE` so the fitted model retains
+the exact observation set used during fitting.
+
 ## Continuous integration and reports
 
 Use `expect_claim_passes()` inside testthat to turn a scientific conclusion into

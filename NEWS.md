@@ -10,6 +10,9 @@
   `broom::tidy()`-style data frames without requiring broom.
 - Added bootstrap and leave-one-out direction-stability checks for `lm` and
   `glm` models.
+- Fixed pre-release model refits so transformed responses and predictors,
+  interactions, `I()`, and `poly()` are reevaluated from the original data
+  after aligning to the observations retained by the fitted model.
 - Rejects non-converged `glm` objects and records failed or non-converged
   resample refits with explicit validity diagnostics.
 - Added `expect_claim_passes()` as an optional bridge to testthat.

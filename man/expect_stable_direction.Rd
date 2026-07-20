@@ -54,6 +54,17 @@ Counts, error classes, messages, and captured warnings are retained in the
 returned object's \code{details} field. An insufficient success proportion
 returns a failed \code{claim_test} rather than silently dropping refits.
 
+Model refits recover the original data named in the \code{lm} or \code{glm} call and
+align them to the observations retained by the fitted model. This allows
+transformations in the response or predictors to be reevaluated for each
+bootstrap or leave-one-out sample while preserving the fitted model's
+\code{subset}, missing-value exclusions, weights, and call-level offset. For
+safety, automatic recovery evaluates only a data-frame name or a row-filtering
+base \code{subset()} expression. Other data-producing calls must be evaluated by
+the user before fitting and supplied through a named data object. Models fit
+with \code{model = FALSE} cannot be resampled because they do not retain the model
+frame needed to identify the observations actually used.
+
 Non-converged \code{glm} objects are rejected because their coefficients cannot
 support reliable claim evaluation. Bootstrap refits that do not converge are
 recorded as failed refits.

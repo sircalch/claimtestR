@@ -26,6 +26,17 @@
 #'   returned object's `details` field. An insufficient success proportion
 #'   returns a failed `claim_test` rather than silently dropping refits.
 #'
+#' Model refits recover the original data named in the `lm` or `glm` call and
+#' align them to the observations retained by the fitted model. This allows
+#' transformations in the response or predictors to be reevaluated for each
+#' bootstrap or leave-one-out sample while preserving the fitted model's
+#' `subset`, missing-value exclusions, weights, and call-level offset. For
+#' safety, automatic recovery evaluates only a data-frame name or a row-filtering
+#' base `subset()` expression. Other data-producing calls must be evaluated by
+#' the user before fitting and supplied through a named data object. Models fit
+#' with `model = FALSE` cannot be resampled because they do not retain the model
+#' frame needed to identify the observations actually used.
+#'
 #' Non-converged `glm` objects are rejected because their coefficients cannot
 #' support reliable claim evaluation. Bootstrap refits that do not converge are
 #' recorded as failed refits.
@@ -189,8 +200,8 @@ resolve_model_direction <- function(x, direction) {
 }
 
 resample_model_estimates <- function(model, term, method, iterations, seed) {
-  data <- stats::model.frame(model)
-  n <- nrow(data)
+  prepared <- prepare_model_resampling(model)
+  n <- nrow(prepared$data)
   if (n < 3L) stop("Model resampling requires at least three observations.", call. = FALSE)
   if (method == "bootstrap") {
     if (!is.numeric(iterations) || length(iterations) != 1L || is.na(iterations) ||
@@ -202,18 +213,25 @@ resample_model_estimates <- function(model, term, method, iterations, seed) {
         as.integer(iterations), sample.int(n, n, replace = TRUE),
         simplify = FALSE
       )
-      evaluate_resample_indices(model, data, indices, term)
+      evaluate_resample_indices(model, prepared, indices, term)
     }))
   } else {
     indices <- lapply(seq_len(n), function(i) setdiff(seq_len(n), i))
   }
 
-  evaluate_resample_indices(model, data, indices, term)
+  evaluate_resample_indices(model, prepared, indices, term)
 }
 
-evaluate_resample_indices <- function(model, data, indices, term) {
+evaluate_resample_indices <- function(model, prepared, indices, term) {
   outcomes <- lapply(seq_along(indices), function(i) {
-    refit_model_once(model, data[indices[[i]], , drop = FALSE], term)
+    index <- indices[[i]]
+    refit_model_once(
+      model,
+      prepared$data[index, , drop = FALSE],
+      term,
+      weights = if (is.null(prepared$weights)) NULL else prepared$weights[index],
+      offset = if (is.null(prepared$offset)) NULL else prepared$offset[index]
+    )
   })
 
   successful_refit <- vapply(outcomes, `[[`, logical(1), "success")
@@ -238,11 +256,11 @@ evaluate_resample_indices <- function(model, data, indices, term) {
   )
 }
 
-refit_model_once <- function(model, data, term) {
+refit_model_once <- function(model, data, term, weights = NULL, offset = NULL) {
   captured_warnings <- list()
   refit <- tryCatch(
     withCallingHandlers(
-      stats::update(model, data = data),
+      update_model_for_resample(model, data, weights, offset),
       warning = function(w) {
         captured_warnings[[length(captured_warnings) + 1L]] <<- list(
           class = class(w)[1L],
