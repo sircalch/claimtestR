@@ -4,10 +4,17 @@
 \alias{expect_equivalent}
 \title{Test statistical equivalence}
 \usage{
-expect_equivalent(x, bounds, term = NULL, conf.int = NULL, estimate = NULL)
+expect_equivalent(
+  x,
+  bounds,
+  term = NULL,
+  conf.int = NULL,
+  estimate = NULL,
+  level = 0.95
+)
 }
 \arguments{
-\item{x}{A result data frame or fitted model.}
+\item{x}{A result data frame, matrix, or fitted model.}
 
 \item{bounds}{Two finite numeric equivalence bounds in increasing order.}
 
@@ -17,11 +24,21 @@ expect_equivalent(x, bounds, term = NULL, conf.int = NULL, estimate = NULL)
 upper interval columns.}
 
 \item{estimate}{Optional estimate-column name for data frames.}
+
+\item{level}{Confidence level used to calculate model intervals.}
 }
 \value{
 A \code{claim_test} object.
 }
 \description{
 Uses the confidence-interval inclusion rule: equivalence passes only when
-the entire interval lies inside the equivalence bounds.
+the entire interval lies within the equivalence bounds.
+}
+\details{
+A non-converged \code{glm} object is rejected with an error because its
+coefficients and intervals cannot support reliable claim evaluation.
+}
+\examples{
+results <- data.frame(estimate = 0.05, conf.low = -0.1, conf.high = 0.2)
+expect_equivalent(results, bounds = c(-0.25, 0.25))
 }

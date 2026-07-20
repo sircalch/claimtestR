@@ -7,11 +7,23 @@
 test_claims(...)
 }
 \arguments{
-\item{...}{\code{claim_test} objects, or lists containing them.}
+\item{...}{\code{claim_test} objects, or nested lists containing them.}
 }
 \value{
-A \code{claim_test_summary} object.
+A \code{claim_test_suite} object.
 }
 \description{
 Collect and summarize claim tests
+}
+\examples{
+claims <- test_claims(
+  expect_positive_effect(2),
+  expect_interval_includes(
+    data.frame(estimate = 2, conf.low = 1, conf.high = 3),
+    value = 2
+  )
+)
+claims
+summary(claims)
+as.data.frame(claims)
 }

@@ -2,31 +2,58 @@
 % Please edit documentation in R/interval.R
 \name{expect_interval_excludes}
 \alias{expect_interval_excludes}
-\title{Test whether an interval excludes a value}
+\alias{expect_interval_includes}
+\title{Test whether an interval excludes or includes a value}
 \usage{
 expect_interval_excludes(
   x,
   term = NULL,
   value = 0,
   conf.int = NULL,
-  estimate = NULL
+  estimate = NULL,
+  level = 0.95
+)
+
+expect_interval_includes(
+  x,
+  term = NULL,
+  value = 0,
+  conf.int = NULL,
+  estimate = NULL,
+  level = 0.95
 )
 }
 \arguments{
-\item{x}{A result data frame or fitted model.}
+\item{x}{A result data frame, matrix, or fitted model.}
 
 \item{term}{Optional term name.}
 
-\item{value}{Numeric value that must be outside the interval.}
+\item{value}{Numeric value evaluated against the interval.}
 
 \item{conf.int}{Optional two-element character vector naming the lower and
 upper interval columns.}
 
 \item{estimate}{Optional estimate-column name for data frames.}
+
+\item{level}{Confidence level used to calculate model intervals.}
 }
 \value{
 A \code{claim_test} object.
 }
 \description{
-Test whether an interval excludes a value
+These assertions treat interval endpoints as included. Therefore, an
+interval excludes \code{value} only when the value is strictly below its lower
+limit or strictly above its upper limit.
+}
+\details{
+A non-converged \code{glm} object is rejected with an error because its
+coefficients and intervals cannot support reliable claim evaluation.
+}
+\examples{
+results <- data.frame(
+  term = "treatment", estimate = 1.2,
+  conf.low = 0.4, conf.high = 2
+)
+expect_interval_excludes(results, term = "treatment", value = 0)
+expect_interval_includes(results, term = "treatment", value = 1)
 }

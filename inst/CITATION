@@ -5,6 +5,6 @@ bibentry(
   title = "claimtestR: Test Statistical Claims as Executable Assertions",
   author = person("Andres", "Monreal"),
   year = "2026",
-  note = "R package version 0.0.1.9000",
+  note = "R package version 0.1.0",
   url = "https://github.com/sircalch/claimtestR"
 )

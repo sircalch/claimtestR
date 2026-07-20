@@ -1,6 +1,6 @@
 Package: claimtestR
 Title: Test Statistical Claims as Executable Assertions
-Version: 0.0.1.9000
+Version: 0.1.0
 Authors@R: 
     person("Andres", "Monreal", role = c("aut", "cre"),
            email = "sircalch@users.noreply.github.com")
@@ -16,6 +16,9 @@ Encoding: UTF-8
 Language: en-US
 Roxygen: list(markdown = TRUE)
 Suggests:
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0

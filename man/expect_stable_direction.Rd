@@ -4,19 +4,67 @@
 \alias{expect_stable_direction}
 \title{Test whether an effect retains its direction}
 \usage{
-expect_stable_direction(x, minimum_proportion = 0.95, na.rm = FALSE)
+expect_stable_direction(
+  x,
+  minimum_proportion = 0.95,
+  na.rm = FALSE,
+  term = NULL,
+  method = c("auto", "estimates", "bootstrap", "leave_one_out"),
+  iterations = 1000L,
+  direction = c("auto", "positive", "negative"),
+  seed = NULL
+)
 }
 \arguments{
-\item{x}{Numeric estimates from resampling or sensitivity analyses.}
+\item{x}{Numeric estimates, or an \code{lm}/\code{glm} model.}
 
-\item{minimum_proportion}{Required proportion with the modal non-zero
-direction. Defaults to \code{0.95}.}
+\item{minimum_proportion}{Required proportion retaining the target direction.}
 
-\item{na.rm}{Whether missing estimates should be removed.}
+\item{na.rm}{For numeric input, whether missing or non-finite estimates should
+be removed. Model-refit failures are never hidden: they are recorded and
+count against the attempted-resample denominator.}
+
+\item{term}{Model term to evaluate.}
+
+\item{method}{One of \code{"auto"}, \code{"estimates"}, \code{"bootstrap"}, or
+\code{"leave_one_out"}. Auto uses existing estimates for numeric input and
+bootstrap for supported models.}
+
+\item{iterations}{Number of bootstrap iterations.}
+
+\item{direction}{Target direction. Auto uses the modal non-zero direction for
+numeric input and the original coefficient direction for a model.}
+
+\item{seed}{Optional integer seed for bootstrap reproducibility. The caller's
+random-number state is restored on exit.}
 }
 \value{
 A \code{claim_test} object.
 }
 \description{
-Test whether an effect retains its direction
+Numeric input is interpreted as estimates from existing resamples or
+sensitivity analyses. For \code{lm} and \code{glm} objects, the function can generate
+estimates using ordinary row bootstrap or leave-one-out refitting.
+}
+\details{
+For model resampling, at least 80\% of attempted refits and at least
+two refits must succeed before the stability assessment is considered
+valid. Failed refits count against the observed stability proportion.
+Counts, error classes, messages, and captured warnings are retained in the
+returned object's \code{details} field. An insufficient success proportion
+returns a failed \code{claim_test} rather than silently dropping refits.
+
+Non-converged \code{glm} objects are rejected because their coefficients cannot
+support reliable claim evaluation. Bootstrap refits that do not converge are
+recorded as failed refits.
+}
+\examples{
+estimates <- c(rep(1.2, 19), -0.4)
+expect_stable_direction(estimates, minimum_proportion = 0.95)
+
+fit <- lm(mpg ~ wt, data = mtcars)
+expect_stable_direction(
+  fit, term = "wt", method = "bootstrap", iterations = 20, seed = 1,
+  minimum_proportion = 0.8
+)
 }

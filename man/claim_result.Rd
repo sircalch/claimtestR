@@ -9,6 +9,9 @@ claim_result(
   claim,
   observed = NULL,
   expected = NULL,
+  term = NULL,
+  message = NULL,
+  evidence = NULL,
   details = list(),
   call = NULL
 )
@@ -16,11 +19,18 @@ claim_result(
 \arguments{
 \item{passed}{A single non-missing logical value.}
 
-\item{claim}{A short description of the claim being tested.}
+\item{claim}{A stable, machine-readable claim identifier such as
+\code{"positive_effect"}.}
 
 \item{observed}{The observed value relevant to the claim.}
 
 \item{expected}{A description or value representing the expectation.}
+
+\item{term}{Optional model term or parameter name.}
+
+\item{message}{A human-readable description of the claim.}
+
+\item{evidence}{A concise human-readable description of the evidence.}
 
 \item{details}{Optional named list with diagnostic information.}
 
@@ -32,4 +42,15 @@ An object of class \code{claim_test}.
 \description{
 \code{claim_result()} is the common result type returned by all claim tests. It
 is useful when extending claimtestR with domain-specific assertions.
+}
+\examples{
+result <- claim_result(
+  passed = TRUE,
+  claim = "positive_effect",
+  observed = 2.4,
+  expected = "> 0",
+  term = "treatment",
+  message = "The treatment effect is positive."
+)
+result
 }
