@@ -1,0 +1,9 @@
+^claimtestR\.Rproj$
+^\.Rproj\.user$
+^\.github$
+^\.r-lib$
+^check-output.*$
+^claimtestR\.Rcheck$
+^claimtestR_.*\.tar\.gz$
+^README\.Rmd$
+^cran-comments\.md$

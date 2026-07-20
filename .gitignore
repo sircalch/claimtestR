@@ -1,0 +1,10 @@
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+.r-lib/
+*.Rcheck/
+*.tar.gz
+check-output*/
+revdep/
+docs/

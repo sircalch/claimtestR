@@ -1,0 +1,21 @@
+Package: claimtestR
+Title: Test Statistical Claims as Executable Assertions
+Version: 0.0.1.9000
+Authors@R: 
+    person("Andres", "Monreal", role = c("aut", "cre"),
+           email = "sircalch@users.noreply.github.com")
+Description: Provides small, composable assertions for testing scientific
+    claims made from statistical results. Claims about direction, uncertainty,
+    practical magnitude, equivalence, stability, and model improvement are
+    represented by structured objects that can be inspected, summarized, and
+    used in automated research workflows.
+License: MIT + file LICENSE
+URL: https://github.com/sircalch/claimtestR
+BugReports: https://github.com/sircalch/claimtestR/issues
+Encoding: UTF-8
+Language: en-US
+Roxygen: list(markdown = TRUE)
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
