@@ -6,7 +6,9 @@
 #'
 #' @param x Numeric estimates, or an `lm`/`glm` model.
 #' @param minimum_proportion Required proportion retaining the target direction.
-#' @param na.rm Whether failed or missing resample estimates should be removed.
+#' @param na.rm For numeric input, whether missing or non-finite estimates should
+#'   be removed. Model-refit failures are never hidden: they are recorded and
+#'   count against the attempted-resample denominator.
 #' @param term Model term to evaluate.
 #' @param method One of `"auto"`, `"estimates"`, `"bootstrap"`, or
 #'   `"leave_one_out"`. Auto uses existing estimates for numeric input and
@@ -16,6 +18,17 @@
 #'   numeric input and the original coefficient direction for a model.
 #' @param seed Optional integer seed for bootstrap reproducibility. The caller's
 #'   random-number state is restored on exit.
+#'
+#' @details For model resampling, at least 80% of attempted refits and at least
+#'   two refits must succeed before the stability assessment is considered
+#'   valid. Failed refits count against the observed stability proportion.
+#'   Counts, error classes, messages, and captured warnings are retained in the
+#'   returned object's `details` field. An insufficient success proportion
+#'   returns a failed `claim_test` rather than silently dropping refits.
+#'
+#' Non-converged `glm` objects are rejected because their coefficients cannot
+#' support reliable claim evaluation. Bootstrap refits that do not converge are
+#' recorded as failed refits.
 #'
 #' @return A `claim_test` object.
 #' @examples
@@ -40,6 +53,7 @@ expect_stable_direction <- function(
   }
   method <- match.arg(method)
   direction <- match.arg(direction)
+  resampling <- NULL
 
   if (is.numeric(x)) {
     if (method == "auto") method <- "estimates"
@@ -57,8 +71,8 @@ expect_stable_direction <- function(
     original <- extract_claim_data(x, term = term)
     selected_term <- original$term
     reference <- resolve_model_direction(original$estimate, direction)
-    estimates <- resample_model_estimates(x, selected_term, method, iterations, seed)
-    estimates <- validate_estimates(estimates, na.rm)
+    resampling <- resample_model_estimates(x, selected_term, method, iterations, seed)
+    estimates <- resampling$estimates[resampling$successful_refit]
   } else {
     stop("`x` must be numeric or an lm/glm model.", call. = FALSE)
   }
@@ -68,10 +82,72 @@ expect_stable_direction <- function(
   } else {
     switch(reference, positive = 1, negative = -1, NA_real_)
   }
-  proportion <- if (is.na(target_sign)) 0 else mean(sign(estimates) == target_sign)
-  passed <- !is.na(target_sign) && proportion >= minimum_proportion
-  evidence <- paste0(format_number(100 * proportion), "% of estimates were ",
-                     reference %||% "without a unique direction")
+  if (is.null(resampling)) {
+    proportion <- if (is.na(target_sign)) 0 else mean(sign(estimates) == target_sign)
+    assessment_valid <- TRUE
+    evidence <- paste0(format_number(100 * proportion), "% of estimates were ",
+                       reference %||% "without a unique direction")
+    details <- list(
+      direction = reference, method = method, estimates = estimates,
+      n = length(estimates), minimum_proportion = minimum_proportion
+    )
+  } else {
+    direction_matches <- if (is.na(target_sign)) {
+      0L
+    } else {
+      sum(sign(estimates) == target_sign)
+    }
+    proportion <- direction_matches / resampling$attempted
+    conditional_proportion <- if (resampling$successful > 0L) {
+      direction_matches / resampling$successful
+    } else {
+      0
+    }
+    assessment_valid <- resampling$successful >= 2L &&
+      resampling$success_proportion >= minimum_resample_success()
+
+    if (assessment_valid) {
+      evidence <- paste0(
+        format_number(100 * proportion), "% of attempted refits retained the ",
+        reference %||% "target", " direction; ", resampling$successful, " of ",
+        resampling$attempted, " refits succeeded (",
+        format_number(100 * resampling$success_proportion), "%)."
+      )
+    } else {
+      evidence <- paste0(
+        "Stability could not be evaluated reliably: ", resampling$successful,
+        " of ", resampling$attempted, " refits succeeded (",
+        format_number(100 * resampling$success_proportion),
+        "%). At least two successful refits and an 80% success proportion are required."
+      )
+    }
+
+    details <- list(
+      direction = reference,
+      method = method,
+      estimates = resampling$estimates,
+      n = resampling$attempted,
+      minimum_proportion = minimum_proportion,
+      attempted = resampling$attempted,
+      successful = resampling$successful,
+      failed = resampling$failed,
+      success_proportion = resampling$success_proportion,
+      minimum_success_proportion = minimum_resample_success(),
+      resampling_valid = assessment_valid,
+      direction_matches = direction_matches,
+      conditional_direction_proportion = conditional_proportion,
+      failures = resampling$failures,
+      warnings = resampling$warnings
+    )
+  }
+
+  passed <- assessment_valid && !is.na(target_sign) &&
+    proportion >= minimum_proportion
+  claim_message <- if (!assessment_valid) {
+    term_message(selected_term, "has insufficient valid refits to assess direction stability.")
+  } else {
+    term_message(selected_term, "retains its effect direction.")
+  }
 
   claim_result(
     passed,
@@ -79,12 +155,9 @@ expect_stable_direction <- function(
     observed = proportion,
     expected = paste0(">= ", minimum_proportion),
     term = selected_term,
-    message = term_message(selected_term, "retains its effect direction."),
+    message = claim_message,
     evidence = evidence,
-    details = list(
-      direction = reference, method = method, estimates = estimates,
-      n = length(estimates), minimum_proportion = minimum_proportion
-    ),
+    details = details,
     call = match.call()
   )
 }
@@ -124,29 +197,181 @@ resample_model_estimates <- function(model, term, method, iterations, seed) {
         !is.finite(iterations) || iterations < 2 || iterations != as.integer(iterations)) {
       stop("`iterations` must be one integer >= 2.", call. = FALSE)
     }
-    validate_seed(seed)
-    old_seed_exists <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    if (old_seed_exists) old_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    on.exit({
-      if (old_seed_exists) {
-        assign(".Random.seed", old_seed, envir = .GlobalEnv)
-      } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-        rm(".Random.seed", envir = .GlobalEnv)
-      }
-    }, add = TRUE)
-    if (!is.null(seed)) set.seed(seed)
-    indices <- replicate(as.integer(iterations), sample.int(n, n, replace = TRUE), simplify = FALSE)
+    return(with_preserved_seed(seed, {
+      indices <- replicate(
+        as.integer(iterations), sample.int(n, n, replace = TRUE),
+        simplify = FALSE
+      )
+      evaluate_resample_indices(model, data, indices, term)
+    }))
   } else {
     indices <- lapply(seq_len(n), function(i) setdiff(seq_len(n), i))
   }
 
-  vapply(indices, function(index) {
-    refit <- try(stats::update(model, data = data[index, , drop = FALSE]), silent = TRUE)
-    if (inherits(refit, "try-error")) return(NA_real_)
-    coefficient <- stats::coef(refit)
-    if (is.null(names(coefficient)) || !term %in% names(coefficient)) return(NA_real_)
-    unname(coefficient[[term]])
-  }, numeric(1))
+  evaluate_resample_indices(model, data, indices, term)
+}
+
+evaluate_resample_indices <- function(model, data, indices, term) {
+  outcomes <- lapply(seq_along(indices), function(i) {
+    refit_model_once(model, data[indices[[i]], , drop = FALSE], term)
+  })
+
+  successful_refit <- vapply(outcomes, `[[`, logical(1), "success")
+  estimates <- vapply(outcomes, `[[`, numeric(1), "estimate")
+  attempted <- length(outcomes)
+  successful <- sum(successful_refit)
+  failures <- collect_refit_failures(outcomes)
+  warnings <- collect_refit_warnings(outcomes)
+
+  structure(
+    list(
+      estimates = estimates,
+      successful_refit = successful_refit,
+      attempted = attempted,
+      successful = successful,
+      failed = attempted - successful,
+      success_proportion = successful / attempted,
+      failures = failures,
+      warnings = warnings
+    ),
+    class = "claim_resample_result"
+  )
+}
+
+refit_model_once <- function(model, data, term) {
+  captured_warnings <- list()
+  refit <- tryCatch(
+    withCallingHandlers(
+      stats::update(model, data = data),
+      warning = function(w) {
+        captured_warnings[[length(captured_warnings) + 1L]] <<- list(
+          class = class(w)[1L],
+          message = conditionMessage(w)
+        )
+        invokeRestart("muffleWarning")
+      }
+    ),
+    error = function(e) e
+  )
+
+  if (inherits(refit, "error")) {
+    return(refit_outcome(
+      success = FALSE,
+      failure_class = class(refit)[1L],
+      failure_message = conditionMessage(refit),
+      warnings = captured_warnings
+    ))
+  }
+
+  assess_refit(refit, term, captured_warnings)
+}
+
+assess_refit <- function(refit, term, warnings = list()) {
+  if (inherits(refit, "glm") && !isTRUE(refit$converged)) {
+    return(refit_outcome(
+      success = FALSE,
+      failure_class = "glm_non_convergence",
+      failure_message = "The refitted glm model did not converge.",
+      warnings = warnings
+    ))
+  }
+
+  coefficient <- tryCatch(stats::coef(refit), error = function(e) e)
+  if (inherits(coefficient, "error")) {
+    return(refit_outcome(
+      success = FALSE,
+      failure_class = class(coefficient)[1L],
+      failure_message = conditionMessage(coefficient),
+      warnings = warnings
+    ))
+  }
+  if (is.null(names(coefficient)) || !term %in% names(coefficient)) {
+    return(refit_outcome(
+      success = FALSE,
+      failure_class = "term_not_found",
+      failure_message = paste0("Term `", term, "` was absent after refitting."),
+      warnings = warnings
+    ))
+  }
+
+  estimate <- unname(coefficient[[term]])
+  if (!is.numeric(estimate) || length(estimate) != 1L || is.na(estimate) ||
+      !is.finite(estimate)) {
+    return(refit_outcome(
+      success = FALSE,
+      failure_class = "non_finite_coefficient",
+      failure_message = paste0(
+        "Term `", term, "` was missing or non-finite after refitting."
+      ),
+      warnings = warnings
+    ))
+  }
+
+  refit_outcome(success = TRUE, estimate = estimate, warnings = warnings)
+}
+
+refit_outcome <- function(success, estimate = NA_real_, failure_class = NULL,
+                          failure_message = NULL, warnings = list()) {
+  list(
+    success = success,
+    estimate = estimate,
+    failure_class = failure_class,
+    failure_message = failure_message,
+    warnings = warnings
+  )
+}
+
+collect_refit_failures <- function(outcomes) {
+  failed <- which(!vapply(outcomes, `[[`, logical(1), "success"))
+  if (!length(failed)) return(empty_diagnostic_table())
+  data.frame(
+    attempt = failed,
+    class = vapply(outcomes[failed], `[[`, character(1), "failure_class"),
+    message = vapply(outcomes[failed], `[[`, character(1), "failure_message"),
+    stringsAsFactors = FALSE
+  )
+}
+
+collect_refit_warnings <- function(outcomes) {
+  records <- lapply(seq_along(outcomes), function(i) {
+    warnings <- outcomes[[i]]$warnings
+    if (!length(warnings)) return(NULL)
+    data.frame(
+      attempt = rep.int(i, length(warnings)),
+      class = vapply(warnings, `[[`, character(1), "class"),
+      message = vapply(warnings, `[[`, character(1), "message"),
+      stringsAsFactors = FALSE
+    )
+  })
+  records <- Filter(Negate(is.null), records)
+  if (!length(records)) return(empty_diagnostic_table())
+  do.call(rbind, records)
+}
+
+empty_diagnostic_table <- function() {
+  data.frame(
+    attempt = integer(), class = character(), message = character(),
+    stringsAsFactors = FALSE
+  )
+}
+
+minimum_resample_success <- function() 0.8
+
+with_preserved_seed <- function(seed, code) {
+  validate_seed(seed)
+  old_seed_exists <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  if (old_seed_exists) {
+    old_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  }
+  on.exit({
+    if (old_seed_exists) {
+      assign(".Random.seed", old_seed, envir = .GlobalEnv)
+    } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      rm(".Random.seed", envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  if (!is.null(seed)) set.seed(seed)
+  force(code)
 }
 
 validate_seed <- function(seed) {

@@ -12,6 +12,9 @@
 #' @param estimate Optional estimate-column name for data frames.
 #' @param level Confidence level used to calculate model intervals.
 #'
+#' @details A non-converged `glm` object is rejected with an error because its
+#'   coefficients and intervals cannot support reliable claim evaluation.
+#'
 #' @return A `claim_test` object.
 #' @examples
 #' results <- data.frame(
@@ -72,6 +75,9 @@ expect_interval_includes <- function(x, term = NULL, value = 0,
 #' @param direction Direction in which the threshold must be reached. The
 #'   default, `"absolute"`, ignores sign.
 #'
+#' @details A non-converged `glm` object is rejected with an error because its
+#'   coefficients cannot support reliable claim evaluation.
+#'
 #' @return A `claim_test` object.
 #' @examples
 #' expect_practical_effect(-6, minimum = 5)
@@ -106,6 +112,9 @@ expect_practical_effect <- function(x, minimum, term = NULL, estimate = NULL,
 #'
 #' @inheritParams expect_interval_excludes
 #' @param bounds Two finite numeric equivalence bounds in increasing order.
+#'
+#' @details A non-converged `glm` object is rejected with an error because its
+#'   coefficients and intervals cannot support reliable claim evaluation.
 #'
 #' @return A `claim_test` object.
 #' @examples

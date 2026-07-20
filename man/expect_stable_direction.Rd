@@ -20,7 +20,9 @@ expect_stable_direction(
 
 \item{minimum_proportion}{Required proportion retaining the target direction.}
 
-\item{na.rm}{Whether failed or missing resample estimates should be removed.}
+\item{na.rm}{For numeric input, whether missing or non-finite estimates should
+be removed. Model-refit failures are never hidden: they are recorded and
+count against the attempted-resample denominator.}
 
 \item{term}{Model term to evaluate.}
 
@@ -43,6 +45,18 @@ A \code{claim_test} object.
 Numeric input is interpreted as estimates from existing resamples or
 sensitivity analyses. For \code{lm} and \code{glm} objects, the function can generate
 estimates using ordinary row bootstrap or leave-one-out refitting.
+}
+\details{
+For model resampling, at least 80\% of attempted refits and at least
+two refits must succeed before the stability assessment is considered
+valid. Failed refits count against the observed stability proportion.
+Counts, error classes, messages, and captured warnings are retained in the
+returned object's \code{details} field. An insufficient success proportion
+returns a failed \code{claim_test} rather than silently dropping refits.
+
+Non-converged \code{glm} objects are rejected because their coefficients cannot
+support reliable claim evaluation. Bootstrap refits that do not converge are
+recorded as failed refits.
 }
 \examples{
 estimates <- c(rep(1.2, 19), -0.4)

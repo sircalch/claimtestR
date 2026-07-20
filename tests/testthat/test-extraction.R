@@ -34,6 +34,60 @@ test_that("lm and glm inputs expose estimates and intervals", {
   expect_true(expect_interval_excludes(logistic, term = "wt")$passed)
 })
 
+test_that("all public model claims reject non-converged glm objects", {
+  converged <- glm(am ~ wt, data = mtcars, family = binomial())
+  expect_true(converged$converged)
+
+  claim_calls <- list(
+    positive = function(x) expect_positive_effect(x, term = "wt"),
+    negative = function(x) expect_negative_effect(x, term = "wt"),
+    interval_excludes = function(x) {
+      expect_interval_excludes(x, term = "wt", value = 0)
+    },
+    interval_includes = function(x) {
+      expect_interval_includes(x, term = "wt", value = 0)
+    },
+    practical = function(x) {
+      expect_practical_effect(x, minimum = 0.1, term = "wt")
+    },
+    equivalent = function(x) {
+      claimtestR::expect_equivalent(x, bounds = c(-100, 100), term = "wt")
+    },
+    stable = function(x) {
+      expect_stable_direction(
+        x, term = "wt", method = "leave_one_out",
+        minimum_proportion = 0.5
+      )
+    }
+  )
+
+  for (claim_call in claim_calls) {
+    expect_s3_class(claim_call(converged), "claim_test")
+  }
+
+  manipulated <- converged
+  manipulated$converged <- FALSE
+  for (claim_call in claim_calls) {
+    expect_error(
+      claim_call(manipulated),
+      "cannot be evaluated reliably.*did not converge"
+    )
+  }
+})
+
+test_that("a genuinely non-converged glm is rejected with actionable guidance", {
+  non_converged <- suppressWarnings(glm(
+    am ~ wt, data = mtcars, family = binomial(),
+    control = glm.control(maxit = 1)
+  ))
+
+  expect_false(non_converged$converged)
+  expect_error(
+    expect_negative_effect(non_converged, term = "wt"),
+    "Refit the model and verify convergence"
+  )
+})
+
 test_that("extraction rejects ambiguous and malformed inputs", {
   multiple <- data.frame(term = c("a", "b"), estimate = c(1, 2))
   expect_error(expect_positive_effect(multiple), "term.*required")
@@ -52,4 +106,3 @@ test_that("extraction rejects ambiguous and malformed inputs", {
   expect_error(expect_positive_effect(list(estimate = 1)), "Unsupported")
   expect_error(expect_positive_effect(1, level = 1), "level")
 })
-

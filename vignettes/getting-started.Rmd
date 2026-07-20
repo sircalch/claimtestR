@@ -123,6 +123,27 @@ stability <- expect_stable_direction(
 stability
 ```
 
+Model-based stability requires at least two successful refits and a success
+proportion of at least 80%. Failed refits are not discarded from the stability
+denominator. If the threshold is not met, the function returns a failed
+`claim_test` and explains that the assessment is unreliable. The diagnostic
+counts and captured conditions remain available for auditing:
+
+```{r stability-diagnostics}
+stability$details[c(
+  "attempted", "successful", "failed", "success_proportion",
+  "minimum_success_proportion", "resampling_valid"
+)]
+stability$details$failures
+stability$details$warnings
+```
+
+Bootstrap refits of a `glm` that do not converge are recorded as failures. A
+non-converged original `glm` is rejected before any claim is evaluated;
+claimtestR does not repair or reinterpret that model. When `seed` is supplied,
+the bootstrap result is reproducible and the caller's random-number state is
+restored even if evaluation exits with an error.
+
 Row bootstrap assumes that rows are the appropriate independent sampling units.
 Clustered and longitudinal analyses require cluster-aware resampling, which is
 planned for a later release and must not be approximated with this method.
@@ -133,4 +154,3 @@ planned for a later release and must not be approximated with this method.
 prose, select a statistical model, determine whether observations are
 independent, or establish that a chosen threshold is scientifically justified.
 Those decisions remain part of the study design and analysis plan.
-

@@ -45,6 +45,10 @@ These assertions treat interval endpoints as included. Therefore, an
 interval excludes \code{value} only when the value is strictly below its lower
 limit or strictly above its upper limit.
 }
+\details{
+A non-converged \code{glm} object is rejected with an error because its
+coefficients and intervals cannot support reliable claim evaluation.
+}
 \examples{
 results <- data.frame(
   term = "treatment", estimate = 1.2,

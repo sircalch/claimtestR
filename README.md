@@ -75,6 +75,27 @@ expect_interval_excludes(model, term = "wt", value = 0)
 expect_practical_effect(model, term = "wt", minimum = 2, direction = "negative")
 ```
 
+`glm` objects must have `converged = TRUE`. claimtestR stops with an actionable
+error for a non-converged model rather than treating its coefficients or
+intervals as reliable evidence. It does not attempt to repair or reinterpret
+the fit.
+
+## Resampling diagnostics
+
+Bootstrap and leave-one-out stability checks retain every attempted refit.
+Failed refits count against the attempted-resample denominator and are never
+silently removed. A model-based stability assessment is valid only when at
+least two refits and at least 80% of all attempted refits succeed. Otherwise,
+the function returns a failed `claim_test` explaining that stability could not
+be assessed reliably.
+
+The returned `details` field includes `attempted`, `successful`, `failed`,
+`success_proportion`, `minimum_success_proportion`, `resampling_valid`, the
+full estimate vector with `NA` at failed attempts, and data frames containing
+failure classes/messages and captured warnings. Bootstrap sampling remains
+reproducible with `seed`, while the caller's random-number state is restored on
+exit.
+
 ## Continuous integration and reports
 
 Use `expect_claim_passes()` inside testthat to turn a scientific conclusion into

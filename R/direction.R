@@ -2,12 +2,16 @@
 #'
 #' Tests whether an estimate is strictly positive or negative. `x` may be a
 #' numeric scalar, a one-row result data frame, or a fitted model supported by
-#' [stats::coef()].
+#' `stats::coef()`.
 #'
 #' @param x A numeric estimate, result data frame, or fitted model.
 #' @param term Optional term name.
 #' @param estimate Optional estimate-column name for data frames.
 #' @param level Confidence level used when extracting intervals from models.
+#'
+#' @details A non-converged `glm` object is rejected with an error because its
+#'   coefficients cannot support reliable claim evaluation. claimtestR does not
+#'   attempt to repair or reinterpret the model.
 #'
 #' @return A `claim_test` object.
 #' @examples

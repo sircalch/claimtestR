@@ -85,6 +85,7 @@ extract_claim_data.lm <- function(x, term = NULL, estimate = NULL,
 #' @exportS3Method extract_claim_data glm
 extract_claim_data.glm <- function(x, term = NULL, estimate = NULL,
                                    conf.int = NULL, level = 0.95, ...) {
+  validate_glm_convergence(x)
   validate_level(level)
   coefficients <- stats::coef(x)
   selected <- select_coefficient(coefficients, term)
@@ -99,6 +100,18 @@ extract_claim_data.glm <- function(x, term = NULL, estimate = NULL,
     source = "glm"
   )
   validate_interval(result)
+}
+
+validate_glm_convergence <- function(x) {
+  if (!isTRUE(x$converged)) {
+    stop(
+      "Statistical claims cannot be evaluated reliably because the `glm` model did not converge. ",
+      "Refit the model and verify convergence before calling claimtestR; ",
+      "the package will not repair or reinterpret the model automatically.",
+      call. = FALSE
+    )
+  }
+  invisible(x)
 }
 
 #' @exportS3Method extract_claim_data default

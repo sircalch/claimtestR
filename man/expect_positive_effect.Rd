@@ -24,7 +24,12 @@ A \code{claim_test} object.
 \description{
 Tests whether an estimate is strictly positive or negative. \code{x} may be a
 numeric scalar, a one-row result data frame, or a fitted model supported by
-\code{\link[stats:coef]{stats::coef()}}.
+\code{stats::coef()}.
+}
+\details{
+A non-converged \code{glm} object is rejected with an error because its
+coefficients cannot support reliable claim evaluation. claimtestR does not
+attempt to repair or reinterpret the model.
 }
 \examples{
 expect_positive_effect(2.5)

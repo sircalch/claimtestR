@@ -33,6 +33,10 @@ A \code{claim_test} object.
 \description{
 Test whether an effect is practically meaningful
 }
+\details{
+A non-converged \code{glm} object is rejected with an error because its
+coefficients cannot support reliable claim evaluation.
+}
 \examples{
 expect_practical_effect(-6, minimum = 5)
 expect_practical_effect(-6, minimum = 5, direction = "negative")

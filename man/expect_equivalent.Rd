@@ -34,6 +34,10 @@ A \code{claim_test} object.
 Uses the confidence-interval inclusion rule: equivalence passes only when
 the entire interval lies within the equivalence bounds.
 }
+\details{
+A non-converged \code{glm} object is rejected with an error because its
+coefficients and intervals cannot support reliable claim evaluation.
+}
 \examples{
 results <- data.frame(estimate = 0.05, conf.low = -0.1, conf.high = 0.2)
 expect_equivalent(results, bounds = c(-0.25, 0.25))
