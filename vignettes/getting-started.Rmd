@@ -1,0 +1,136 @@
+---
+title: "Getting started with claimtestR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with claimtestR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+`claimtestR` represents a scientific claim as an executable assertion. Unlike a
+testthat expectation, an ordinary claim does not stop execution when it fails.
+It returns evidence that can be inspected, summarized, and included in a report.
+
+## Fit a model
+
+This vignette uses a base R linear model so that the full workflow is
+reproducible without downloading data or installing modeling packages.
+
+```{r model}
+library(claimtestR)
+
+model <- lm(mpg ~ wt + hp, data = mtcars)
+summary(model)$coefficients
+```
+
+## Declare claims
+
+Each assertion identifies the model term explicitly. The practical-effect claim
+below requires a decrease of at least two miles per gallon per unit of weight.
+
+```{r claims}
+claims <- test_claims(
+  expect_negative_effect(model, term = "wt"),
+  expect_interval_excludes(model, term = "wt", value = 0),
+  expect_practical_effect(
+    model,
+    term = "wt",
+    minimum = 2,
+    direction = "negative"
+  )
+)
+
+claims
+```
+
+Every result contains a stable claim identifier, status, observed value,
+expectation, term, message, evidence, diagnostic details, and originating call.
+
+```{r inspect}
+str(claims$results[[1]], max.level = 1)
+summary(claims)
+```
+
+## Report and export results
+
+`report_claims()` returns a Markdown table suitable for a Quarto or R Markdown
+document.
+
+```{r markdown-report, results = "asis"}
+cat(report_claims(claims, format = "markdown"), "\n")
+```
+
+For further formatting or archival export, convert the suite to a data frame.
+
+```{r export}
+claim_data <- as.data.frame(claims)
+claim_data
+
+export_path <- tempfile(fileext = ".csv")
+utils::write.csv(claim_data, export_path, row.names = FALSE)
+file.exists(export_path)
+unlink(export_path)
+```
+
+The data frame can also be passed directly to `knitr::kable()`.
+
+```{r kable, results = "asis"}
+knitr::kable(claim_data)
+```
+
+## Make a claim enforceable in CI
+
+Use `expect_claim_passes()` inside a testthat test when a failed scientific claim
+must fail continuous integration.
+
+```{r testthat-bridge}
+if (requireNamespace("testthat", quietly = TRUE)) {
+  expect_claim_passes(
+    expect_negative_effect(model, term = "wt")
+  )
+}
+```
+
+For example, a project can place the following code in `tests/testthat/`:
+
+```r
+testthat::test_that("the primary conclusion remains valid", {
+  model <- run_analysis()
+  claimtestR::expect_claim_passes(
+    claimtestR::expect_negative_effect(model, term = "treatment")
+  )
+})
+```
+
+## Check stability
+
+The initial stability API accepts existing resample estimates or can refit base R
+models with row bootstrap and leave-one-out analyses.
+
+```{r stability}
+stability <- expect_stable_direction(
+  model,
+  term = "wt",
+  method = "bootstrap",
+  iterations = 50,
+  minimum_proportion = 0.9,
+  seed = 2026
+)
+stability
+```
+
+Row bootstrap assumes that rows are the appropriate independent sampling units.
+Clustered and longitudinal analyses require cluster-aware resampling, which is
+planned for a later release and must not be approximated with this method.
+
+## Scope and limitations
+
+`claimtestR` checks claims chosen by the analyst. It does not infer claims from
+prose, select a statistical model, determine whether observations are
+independent, or establish that a chosen threshold is scientifically justified.
+Those decisions remain part of the study design and analysis plan.
+

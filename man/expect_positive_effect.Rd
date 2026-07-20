@@ -5,9 +5,9 @@
 \alias{expect_negative_effect}
 \title{Test the direction of an effect}
 \usage{
-expect_positive_effect(x, term = NULL, estimate = NULL)
+expect_positive_effect(x, term = NULL, estimate = NULL, level = 0.95)
 
-expect_negative_effect(x, term = NULL, estimate = NULL)
+expect_negative_effect(x, term = NULL, estimate = NULL, level = 0.95)
 }
 \arguments{
 \item{x}{A numeric estimate, result data frame, or fitted model.}
@@ -15,6 +15,8 @@ expect_negative_effect(x, term = NULL, estimate = NULL)
 \item{term}{Optional term name.}
 
 \item{estimate}{Optional estimate-column name for data frames.}
+
+\item{level}{Confidence level used when extracting intervals from models.}
 }
 \value{
 A \code{claim_test} object.
@@ -23,4 +25,10 @@ A \code{claim_test} object.
 Tests whether an estimate is strictly positive or negative. \code{x} may be a
 numeric scalar, a one-row result data frame, or a fitted model supported by
 \code{\link[stats:coef]{stats::coef()}}.
+}
+\examples{
+expect_positive_effect(2.5)
+
+fit <- lm(mpg ~ wt, data = mtcars)
+expect_negative_effect(fit, term = "wt")
 }

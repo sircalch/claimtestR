@@ -8,6 +8,8 @@
 It is designed for reproducible reports, analysis pipelines, and regression
 testing of statistical conclusions.
 
+The current release is **0.1.0**, the first public core API.
+
 ## Why?
 
 Ordinary software tests ask whether an object has the expected value.
@@ -59,11 +61,42 @@ that turn failed claims into CI errors can be layered on top of this stable core
 packages are attached, use `claimtestR::expect_equivalent()` to make the intended
 function explicit.
 
+## Supported inputs
+
+Assertions accept numeric estimates, matrices, result data frames (including
+the standard columns returned by `broom::tidy()`), and base R `lm` and `glm`
+models. Model terms are selected explicitly:
+
+```r
+model <- lm(mpg ~ wt + hp, data = mtcars)
+
+expect_negative_effect(model, term = "wt")
+expect_interval_excludes(model, term = "wt", value = 0)
+expect_practical_effect(model, term = "wt", minimum = 2, direction = "negative")
+```
+
+## Continuous integration and reports
+
+Use `expect_claim_passes()` inside testthat to turn a scientific conclusion into
+a CI requirement:
+
+```r
+testthat::test_that("the primary conclusion remains valid", {
+  expect_claim_passes(expect_negative_effect(model, term = "wt"))
+})
+```
+
+For Quarto or R Markdown, `report_claims()` produces a Markdown table, while
+`as.data.frame()` returns data suitable for `knitr::kable()` or export.
+
 ## Initial scope
 
-The first version intentionally uses claims explicitly declared by the analyst.
+The package intentionally uses claims explicitly declared by the analyst.
 It does not infer scientific meaning from prose and does not claim to choose an
 appropriate statistical method automatically.
+
+See `vignette("getting-started", package = "claimtestR")` for an end-to-end
+workflow and [ROADMAP.md](ROADMAP.md) for planned releases.
 
 ## Development
 

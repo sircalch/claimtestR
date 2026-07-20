@@ -7,3 +7,6 @@
 ^claimtestR_.*\.tar\.gz$
 ^README\.Rmd$
 ^cran-comments\.md$
+^CODE_OF_CONDUCT\.md$
+^CONTRIBUTING\.md$
+^ROADMAP\.md$

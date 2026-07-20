@@ -26,3 +26,6 @@ A \code{claim_test} object.
 \description{
 Test whether a candidate model improves on a reference
 }
+\examples{
+expect_model_improves(candidate = 8, reference = 10, direction = "lower")
+}

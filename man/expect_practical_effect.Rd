@@ -4,20 +4,36 @@
 \alias{expect_practical_effect}
 \title{Test whether an effect is practically meaningful}
 \usage{
-expect_practical_effect(x, minimum, term = NULL, estimate = NULL)
+expect_practical_effect(
+  x,
+  minimum,
+  term = NULL,
+  estimate = NULL,
+  direction = c("absolute", "positive", "negative"),
+  level = 0.95
+)
 }
 \arguments{
 \item{x}{A numeric estimate, result data frame, or fitted model.}
 
-\item{minimum}{Minimum absolute effect size, inclusive.}
+\item{minimum}{Minimum effect magnitude, inclusive.}
 
 \item{term}{Optional term name.}
 
 \item{estimate}{Optional estimate-column name for data frames.}
+
+\item{direction}{Direction in which the threshold must be reached. The
+default, \code{"absolute"}, ignores sign.}
+
+\item{level}{Confidence level used when extracting intervals from models.}
 }
 \value{
 A \code{claim_test} object.
 }
 \description{
 Test whether an effect is practically meaningful
+}
+\examples{
+expect_practical_effect(-6, minimum = 5)
+expect_practical_effect(-6, minimum = 5, direction = "negative")
 }
