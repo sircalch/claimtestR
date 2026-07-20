@@ -117,7 +117,8 @@ test_that("leave-one-out returns a failed claim when every refit fails", {
 })
 
 test_that("model resampling rejects samples that are too small", {
-  fit <- lm(response ~ 1, data = data.frame(response = c(1, 2)))
+  small_data <- data.frame(response = c(1, 2))
+  fit <- lm(response ~ 1, data = small_data)
   expect_error(
     expect_stable_direction(
       fit, term = "(Intercept)", method = "leave_one_out"
@@ -241,6 +242,53 @@ test_that("recovered data match rows retained after missing values", {
   expect_identical(result$details$failed, 0L)
 })
 
+test_that("na.omit and na.exclude retain exactly the fitted rows", {
+  for (action in list(na.omit, na.exclude)) {
+    model_data <- mtcars
+    model_data$mpg[c(2, 9)] <- NA_real_
+    model_data$wt[c(3, 11)] <- NA_real_
+    fit <- lm(
+      log(mpg) ~ log(wt), data = model_data, na.action = action
+    )
+    prepared <- claimtestR:::prepare_model_resampling(fit)
+    fitted_rows <- row.names(stats::model.frame(fit))
+
+    expect_identical(row.names(prepared$data), fitted_rows)
+    expect_identical(nrow(prepared$data), length(fitted_rows))
+    expect_false(any(
+      row.names(model_data)[c(2, 3, 9, 11)] %in% row.names(prepared$data)
+    ))
+
+    result <- expect_stable_direction(
+      fit, term = "log(wt)", method = "leave_one_out",
+      minimum_proportion = 0
+    )
+    expect_identical(result$details$attempted, length(fitted_rows))
+    expect_identical(result$details$failed, 0L)
+  }
+})
+
+test_that("duplicated rows and nonsequential row names stay aligned", {
+  duplicated_data <- rbind(mtcars[1:12, ], mtcars[1:5, ])
+  row.names(duplicated_data) <- paste0(
+    "subject-", seq(101, by = 7, length.out = nrow(duplicated_data))
+  )
+  fit <- lm(mpg ~ log(wt), data = duplicated_data)
+  prepared <- claimtestR:::prepare_model_resampling(fit)
+
+  expect_identical(
+    row.names(prepared$data), row.names(stats::model.frame(fit))
+  )
+  expect_identical(prepared$data, duplicated_data)
+
+  result <- expect_stable_direction(
+    fit, term = "log(wt)", method = "leave_one_out",
+    minimum_proportion = 0
+  )
+  expect_identical(result$details$attempted, nrow(duplicated_data))
+  expect_identical(result$details$failed, 0L)
+})
+
 test_that("subset weights and offsets remain aligned for refits", {
   data <- mtcars
   data$mpg[2] <- NA_real_
@@ -286,10 +334,9 @@ test_that("poly terms remain recoverable after subset and missing-value filterin
   expect_identical(result$details$failed, 0L)
 })
 
-test_that("named subset expressions and local data objects are recoverable", {
-  subset_fit <- lm(
-    mpg ~ log(wt), data = subset(mtcars, mpg > 15)
-  )
+test_that("materialized subsets and local data objects are recoverable", {
+  subset_data <- subset(mtcars, mpg > 15)
+  subset_fit <- lm(mpg ~ log(wt), data = subset_data)
   make_local_fit <- function() {
     local_data <- mtcars
     lm(mpg ~ log(wt), data = local_data)
@@ -322,7 +369,7 @@ test_that("unsafe data-producing calls are not reevaluated", {
     expect_stable_direction(
       fit, term = "log(wt)", method = "bootstrap", iterations = 2
     ),
-    "Could not safely recover the original model data"
+    "simple data-frame name"
   )
   expect_false(called)
 })
@@ -346,11 +393,9 @@ test_that("models without retained model frames fail without reevaluation", {
 })
 
 test_that("missing original variables produce a clear recovery error", {
-  fit <- local({
-    response <- mtcars$mpg
-    predictor <- mtcars$wt
-    lm(response ~ log(predictor))
-  })
+  data <- data.frame(response = mtcars$mpg, predictor = mtcars$wt)
+  fit <- lm(response ~ log(predictor), data = data)
+  data$predictor <- NULL
 
   expect_error(
     expect_stable_direction(
@@ -358,6 +403,78 @@ test_that("missing original variables produce a clear recovery error", {
     ),
     "original model data columns required for refitting: predictor"
   )
+})
+
+test_that("the 80 percent and two-refit validity boundaries remain exact", {
+  method_name <- "update.claimtest_scripted_refit"
+  old_method <- get0(method_name, envir = .GlobalEnv, inherits = FALSE)
+  state <- new.env(parent = emptyenv())
+  assign(method_name, function(object, ...) {
+    state$attempt <- state$attempt + 1L
+    if (state$attempt %in% state$failures) stop("scripted refit failure")
+    class(object) <- setdiff(class(object), "claimtest_scripted_refit")
+    do.call(stats::update, c(list(object = object), list(...)))
+  }, envir = .GlobalEnv)
+  on.exit({
+    if (is.null(old_method)) {
+      rm(list = method_name, envir = .GlobalEnv)
+    } else {
+      assign(method_name, old_method, envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+
+  run_scripted <- function(failures, iterations) {
+    model_data <- mtcars
+    fit <- lm(mpg ~ wt, data = model_data)
+    class(fit) <- c("claimtest_scripted_refit", class(fit))
+    state$attempt <- 0L
+    state$failures <- failures
+    expect_stable_direction(
+      fit, term = "wt", method = "bootstrap", iterations = iterations,
+      seed = 7, minimum_proportion = 0
+    )
+  }
+
+  exact <- run_scripted(1:2, 10)
+  below <- run_scripted(1:3, 10)
+  one_valid <- run_scripted(1, 2)
+
+  expect_identical(exact$details$successful, 8L)
+  expect_true(exact$details$resampling_valid)
+  expect_identical(below$details$successful, 7L)
+  expect_false(below$details$resampling_valid)
+  expect_false(below$passed)
+  expect_identical(one_valid$details$successful, 1L)
+  expect_false(one_valid$details$resampling_valid)
+  expect_false(one_valid$passed)
+  for (result in list(exact, below, one_valid)) {
+    expect_identical(
+      result$details$attempted,
+      result$details$successful + result$details$failed
+    )
+  }
+})
+
+test_that("bootstrap restores an initially absent random seed", {
+  model_data <- mtcars
+  fit <- lm(mpg ~ log(wt), data = model_data)
+  old_seed_exists <- exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  if (old_seed_exists) {
+    old_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    rm(".Random.seed", envir = .GlobalEnv)
+  }
+  on.exit({
+    if (old_seed_exists) assign(".Random.seed", old_seed, envir = .GlobalEnv)
+  }, add = TRUE)
+
+  expect_s3_class(
+    expect_stable_direction(
+      fit, term = "log(wt)", method = "bootstrap",
+      iterations = 5, seed = 19
+    ),
+    "claim_test"
+  )
+  expect_false(exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
 })
 
 test_that("model improvement respects metric direction", {

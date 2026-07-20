@@ -99,11 +99,22 @@ exit.
 For `lm` and `glm` refits, claimtestR recovers the named original data and then
 keeps exactly the rows used by the fitted model. This allows formulas such as
 `mpg ~ log(wt)`, `log(mpg) ~ wt`, `mpg ~ I(wt^2)`, interactions, and `poly()`
-terms to be reevaluated for each resample. A row-filtering `base::subset()` data
-expression is also supported. Other data-producing calls are not executed
-automatically; assign their result to a named data frame before fitting. Model
-resampling also requires the default `model = TRUE` so the fitted model retains
-the exact observation set used during fitting.
+terms to be reevaluated for each resample. Formula objects stored under local
+names are supported because refits use the formula retained by the model.
+
+For safety in version 0.1.0, `data` must be a simple name that points to an
+ordinary base data frame whose columns are unclassed atomic vectors or base
+factors. Active bindings, additional data or column classes, and calls such as
+`subset()`, `transform()`, `within()`, or `get()` are rejected. Materialize a
+data-producing call before fitting:
+
+```r
+analysis_data <- subset(mtcars, mpg > 15)
+model <- lm(mpg ~ log(wt), data = analysis_data)
+```
+
+Model resampling also requires the default `model = TRUE` so the fitted model
+retains the exact observation set used during fitting.
 
 ## Continuous integration and reports
 

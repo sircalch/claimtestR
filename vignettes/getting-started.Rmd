@@ -155,11 +155,27 @@ transformed_stability <- expect_stable_direction(
 transformed_stability
 ```
 
-Named data frames and row-filtering `base::subset()` expressions are recovered
-automatically. Calls that produce data through other functions are deliberately
-not reevaluated during stability checks; assign such a result to a named data
-frame before fitting. This restriction prevents refitting from executing an
-arbitrary data-producing call stored in a model object.
+For stability refits in version 0.1.0, `data` must be a simple name that points
+to an ordinary base data frame whose columns are unclassed atomic vectors or
+base factors. Active bindings, additional data or column classes, and all calls
+in `data` -- including `subset()`, `transform()`, `within()`, and `get()` -- are
+rejected rather than evaluated. Materialize the result first:
+
+```{r materialized-data}
+filtered_data <- subset(mtcars, mpg > 15)
+filtered_model <- lm(mpg ~ log(wt), data = filtered_data)
+expect_stable_direction(
+  filtered_model,
+  term = "log(wt)",
+  method = "bootstrap",
+  iterations = 20,
+  seed = 2026
+)
+```
+
+Formula objects stored under local names remain supported: claimtestR uses the
+formula object retained by the fitted model, including its environment, instead
+of depending on the original formula symbol still being available.
 
 Models fit with `model = FALSE` are not eligible for refitting because they do
 not retain the model frame needed to identify the observations actually used.

@@ -1,21 +1,25 @@
 prepare_model_resampling <- function(model) {
   model_frame <- model$model
-  if (!is.data.frame(model_frame)) {
+  if (!identical(class(model_frame), "data.frame")) {
     stop(
       "Model resampling requires an lm or glm fitted with `model = TRUE` ",
       "so the observations actually used can be recovered safely.",
       call. = FALSE
     )
   }
-  model_frame <- as_base_data_frame(model_frame)
-  recovered <- recover_original_model_data(model, model_frame)
+  recovered <- recover_original_model_data(model)
   data <- align_recovered_model_data(recovered, model_frame)
   validate_recovered_model_data(model, data, model_frame)
 
   weights <- NULL
   if (has_model_call_argument(model, "weights")) {
-    weights <- stats::model.weights(model_frame)
-    if (is.null(weights) || length(weights) != nrow(model_frame)) {
+    weight_index <- match("(weights)", data_frame_names(model_frame))
+    weights <- if (is.na(weight_index)) {
+      NULL
+    } else {
+      base::.subset2(model_frame, weight_index)
+    }
+    if (is.null(weights) || length(weights) != data_frame_nrow(model_frame)) {
       stop(
         "Could not recover the weights used by the fitted model for refitting.",
         call. = FALSE
@@ -25,39 +29,83 @@ prepare_model_resampling <- function(model) {
 
   offset <- NULL
   if (has_model_call_argument(model, "offset")) {
-    if (!"(offset)" %in% names(model_frame)) {
+    offset_index <- match("(offset)", data_frame_names(model_frame))
+    if (is.na(offset_index)) {
       stop(
         "Could not recover the call-level offset used by the fitted model for refitting.",
         call. = FALSE
       )
     }
-    offset <- model_frame[["(offset)"]]
+    offset <- base::.subset2(model_frame, offset_index)
   }
 
   list(data = data, weights = weights, offset = offset)
 }
 
-recover_original_model_data <- function(model, model_frame) {
+recover_original_model_data <- function(model) {
   data_expression <- model$call$data
-  if (is.null(data_expression)) {
-    data <- as_base_data_frame(model_frame)
-  } else if (!is.name(data_expression) && !is_safe_subset_call(data_expression) &&
-             model_frame_contains_original_variables(model, model_frame)) {
-    data <- as_base_data_frame(model_frame)
-  } else {
-    formula_environment <- environment(stats::formula(model))
-    if (is.null(formula_environment)) {
-      stop(
-        "Could not safely recover the original model data because the model formula has no environment.",
-        call. = FALSE
-      )
-    }
-    data <- evaluate_model_data_expression(data_expression, formula_environment)
-    data <- as_base_data_frame(data)
+  if (!is.name(data_expression)) {
+    stop(
+      "Model stability refits require `data` to be supplied as a simple ",
+      "data-frame name. Calls such as `subset()`, `transform()`, `within()`, ",
+      "or `get()` are not supported; assign their result to a named base ",
+      "data frame before fitting the model.",
+      call. = FALSE
+    )
+  }
+
+  formula_environment <- environment(stats::formula(model))
+  if (is.null(formula_environment)) {
+    stop(
+      "Could not safely recover the original model data because the model formula has no environment.",
+      call. = FALSE
+    )
+  }
+
+  name <- as.character(data_expression)
+  binding_environment <- find_binding_environment(name, formula_environment)
+  if (is.null(binding_environment)) {
+    stop(
+      "Could not recover the original model data object `", name,
+      "` from the model formula environment or its parents.",
+      call. = FALSE
+    )
+  }
+  if (bindingIsActive(name, binding_environment)) {
+    stop(
+      "Cannot safely recover model data from `", name,
+      "` because it is an active binding. Use an ordinary named base data frame.",
+      call. = FALSE
+    )
+  }
+
+  data <- get(name, envir = binding_environment, inherits = FALSE)
+  if (!identical(class(data), "data.frame")) {
+    stop(
+      "The model data object `", name,
+      "` must have class exactly `data.frame` for safe stability refits. ",
+      "Objects with additional or custom classes are not supported in version 0.1.0.",
+      call. = FALSE
+    )
+  }
+  data_names <- data_frame_names(data)
+  safe_columns <- vapply(seq_along(data_names), function(index) {
+    is_safe_data_column(base::.subset2(data, index))
+  }, logical(1), USE.NAMES = FALSE)
+  unsafe_columns <- data_names[!safe_columns]
+  if (length(unsafe_columns)) {
+    stop(
+      "The model data object `", name,
+      "` contains columns with additional classes or non-atomic structure: ",
+      paste(unsafe_columns, collapse = ", "),
+      ". Stability refits in version 0.1.0 require unclassed atomic columns ",
+      "or base factors.",
+      call. = FALSE
+    )
   }
 
   required <- all.vars(stats::formula(model))
-  missing <- setdiff(required, names(data))
+  missing <- setdiff(required, data_names)
   if (length(missing)) {
     stop(
       "Could not recover the original model data columns required for refitting: ",
@@ -69,129 +117,29 @@ recover_original_model_data <- function(model, model_frame) {
   data
 }
 
-model_frame_contains_original_variables <- function(model, model_frame) {
-  all(all.vars(stats::formula(model)) %in% names(model_frame))
+data_frame_names <- function(data) {
+  attr(data, "names", exact = TRUE)
 }
 
-evaluate_model_data_expression <- function(expression, environment) {
-  if (is.name(expression)) {
-    name <- as.character(expression)
-    if (!exists(name, envir = environment, inherits = TRUE)) {
-      stop(
-        "Could not recover the original model data object `", name,
-        "` from the model formula environment.",
-        call. = FALSE
-      )
-    }
-    return(get(name, envir = environment, inherits = TRUE))
-  }
-
-  if (!is_safe_subset_call(expression)) {
-    stop(
-      "Could not safely recover the original model data from `model$call$data`. ",
-      "Use a named data frame or a row-filtering base `subset()` expression when fitting the model.",
-      call. = FALSE
-    )
-  }
-
-  arguments <- as.list(expression)[-1L]
-  argument_names <- names(arguments)
-  if (is.null(argument_names)) argument_names <- rep.int("", length(arguments))
-  data_index <- which(argument_names == "x")
-  if (!length(data_index)) data_index <- 1L
-  subset_index <- which(argument_names == "subset")
-  if (!length(subset_index)) {
-    candidates <- setdiff(seq_along(arguments), data_index[1L])
-    if (length(candidates)) subset_index <- candidates[1L]
-  }
-  supported <- c(data_index[1L], subset_index[1L])
-  supported <- supported[!is.na(supported)]
-  if (length(arguments) > length(unique(supported))) {
-    stop(
-      "Could not safely recover model data from `subset()`: only row filtering is supported.",
-      call. = FALSE
-    )
-  }
-
-  data <- evaluate_model_data_expression(arguments[[data_index[1L]]], environment)
-  data <- as_base_data_frame(data)
-  if (!length(subset_index)) return(data)
-
-  predicate <- arguments[[subset_index[1L]]]
-  if (!is_safe_subset_predicate(predicate)) {
-    stop(
-      "Could not safely evaluate the row predicate in `model$call$data`.",
-      call. = FALSE
-    )
-  }
-  rows <- tryCatch(
-    eval(predicate, envir = data, enclos = baseenv()),
-    error = function(e) {
-      stop(
-        "Could not evaluate the row predicate in `model$call$data`: ",
-        conditionMessage(e),
-        call. = FALSE
-      )
-    }
-  )
-  if (!is.logical(rows) || !(length(rows) %in% c(1L, nrow(data)))) {
-    stop(
-      "The row predicate in `model$call$data` must return one logical value per row.",
-      call. = FALSE
-    )
-  }
-  rows <- rep_len(rows, nrow(data))
-  rows[is.na(rows)] <- FALSE
-  data[rows, , drop = FALSE]
+is_safe_data_column <- function(column) {
+  if (!is.atomic(column) || !is.null(dim(column))) return(FALSE)
+  if (!is.object(column)) return(TRUE)
+  identical(class(column), "factor") ||
+    identical(class(column), c("ordered", "factor"))
 }
 
-is_safe_subset_call <- function(expression) {
-  if (!is.call(expression)) return(FALSE)
-  head <- expression[[1L]]
-  if (is.name(head) && identical(as.character(head), "subset")) return(TRUE)
-  is.call(head) && identical(as.character(head[[1L]]), "::") &&
-    identical(as.character(head[[2L]]), "base") &&
-    identical(as.character(head[[3L]]), "subset")
-}
-
-is_safe_subset_predicate <- function(expression) {
-  if (is.atomic(expression) || is.name(expression)) return(TRUE)
-  if (!is.call(expression) || !is.name(expression[[1L]])) return(FALSE)
-  allowed <- c(
-    "(", "!", "&", "&&", "|", "||", "==", "!=", "<", "<=", ">", ">=",
-    "+", "-", "*", "/", "^", "%%", "%/%", "%in%", ":", "c", "is.na",
-    "is.finite", "complete.cases", "[", "[[", "$"
-  )
-  if (!as.character(expression[[1L]]) %in% allowed) return(FALSE)
-  all(vapply(as.list(expression)[-1L], is_safe_subset_predicate, logical(1)))
-}
-
-as_base_data_frame <- function(x) {
-  if (is.data.frame(x)) {
-    attributes <- attributes(x)
-    attributes$class <- "data.frame"
-    attributes(x) <- attributes
-    return(x)
+find_binding_environment <- function(name, start_environment) {
+  current <- start_environment
+  repeat {
+    if (exists(name, envir = current, inherits = FALSE)) return(current)
+    if (identical(current, emptyenv())) return(NULL)
+    current <- parent.env(current)
   }
-  if (is.matrix(x) && length(dim(x)) == 2L) {
-    columns <- lapply(seq_len(ncol(x)), function(i) x[, i])
-    names(columns) <- colnames(x) %||% paste0("V", seq_len(ncol(x)))
-    result <- base::list2DF(columns)
-    if (!is.null(rownames(x))) row.names(result) <- rownames(x)
-    return(result)
-  }
-  if (is.list(x) && is.null(class(x))) {
-    return(base::list2DF(x))
-  }
-  stop(
-    "The recovered model data must be a data frame, matrix, or unclassed list.",
-    call. = FALSE
-  )
 }
 
 align_recovered_model_data <- function(data, model_frame) {
-  used_rows <- row.names(model_frame)
-  available_rows <- row.names(data)
+  used_rows <- data_frame_row_names(model_frame)
+  available_rows <- data_frame_row_names(data)
   if (anyDuplicated(used_rows) || anyDuplicated(available_rows)) {
     stop(
       "Could not align recovered model data because row names are not unique.",
@@ -205,14 +153,39 @@ align_recovered_model_data <- function(data, model_frame) {
       call. = FALSE
     )
   }
-  aligned <- data[positions, , drop = FALSE]
-  if (!identical(row.names(aligned), used_rows)) {
+  data_names <- data_frame_names(data)
+  columns <- lapply(seq_along(data_names), function(index) {
+    subset_safe_data_column(base::.subset2(data, index), positions)
+  })
+  attr(columns, "names") <- data_names
+  aligned <- structure(columns, row.names = used_rows, class = "data.frame")
+  if (!identical(data_frame_row_names(aligned), used_rows)) {
     stop(
       "Recovered model data did not preserve the fitted model's observation order.",
       call. = FALSE
     )
   }
   aligned
+}
+
+data_frame_row_names <- function(data) {
+  rows <- base::.row_names_info(data, type = 0L)
+  if (is.integer(rows) && length(rows) == 2L && is.na(rows[1L])) {
+    return(as.character(seq_len(abs(rows[2L]))))
+  }
+  as.character(rows)
+}
+
+data_frame_nrow <- function(data) {
+  base::.row_names_info(data, type = 2L)
+}
+
+subset_safe_data_column <- function(column, positions) {
+  if (!is.object(column)) return(base::.subset(column, positions))
+  result <- base::.subset(unclass(column), positions)
+  attr(result, "levels") <- attr(column, "levels", exact = TRUE)
+  class(result) <- class(column)
+  result
 }
 
 validate_recovered_model_data <- function(model, data, model_frame) {
@@ -229,13 +202,17 @@ validate_recovered_model_data <- function(model, data, model_frame) {
       )
     }
   )
-  if (!identical(row.names(reconstructed), row.names(model_frame))) {
+  if (!identical(
+    data_frame_row_names(reconstructed), data_frame_row_names(model_frame)
+  )) {
     stop(
       "Recovered model data do not correspond to the observations used by the fitted model.",
       call. = FALSE
     )
   }
-  missing <- setdiff(names(reconstructed), names(model_frame))
+  reconstructed_names <- data_frame_names(reconstructed)
+  model_frame_names <- data_frame_names(model_frame)
+  missing <- setdiff(reconstructed_names, model_frame_names)
   if (length(missing)) {
     stop(
       "Recovered model data produced unexpected formula columns: ",
@@ -243,8 +220,12 @@ validate_recovered_model_data <- function(model, data, model_frame) {
       call. = FALSE
     )
   }
-  matches <- vapply(names(reconstructed), function(name) {
-    formula_column_matches(reconstructed[[name]], model_frame[[name]])
+  matches <- vapply(reconstructed_names, function(name) {
+    reconstructed_column <- base::.subset2(
+      reconstructed, match(name, reconstructed_names)
+    )
+    fitted_column <- base::.subset2(model_frame, match(name, model_frame_names))
+    formula_column_matches(reconstructed_column, fitted_column)
   }, logical(1))
   if (!all(matches)) {
     stop(
@@ -271,16 +252,15 @@ has_model_call_argument <- function(model, name) {
 }
 
 update_model_for_resample <- function(model, data, weights, offset) {
-  if (!is.null(weights) && !is.null(offset)) {
-    return(stats::update(
-      model, data = data, subset = NULL, weights = weights, offset = offset
-    ))
-  }
-  if (!is.null(weights)) {
-    return(stats::update(model, data = data, subset = NULL, weights = weights))
-  }
-  if (!is.null(offset)) {
-    return(stats::update(model, data = data, subset = NULL, offset = offset))
-  }
-  stats::update(model, data = data, subset = NULL)
+  arguments <- list(
+    object = model,
+    formula. = stats::formula(model),
+    data = data,
+    subset = NULL,
+    na.action = stats::na.pass
+  )
+  if (inherits(model, "glm")) arguments$family <- stats::family(model)
+  if (!is.null(weights)) arguments$weights <- weights
+  if (!is.null(offset)) arguments$offset <- offset
+  do.call(stats::update, arguments)
 }

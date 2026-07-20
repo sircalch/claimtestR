@@ -30,12 +30,18 @@
 #' align them to the observations retained by the fitted model. This allows
 #' transformations in the response or predictors to be reevaluated for each
 #' bootstrap or leave-one-out sample while preserving the fitted model's
-#' `subset`, missing-value exclusions, weights, and call-level offset. For
-#' safety, automatic recovery evaluates only a data-frame name or a row-filtering
-#' base `subset()` expression. Other data-producing calls must be evaluated by
-#' the user before fitting and supplied through a named data object. Models fit
-#' with `model = FALSE` cannot be resampled because they do not retain the model
-#' frame needed to identify the observations actually used.
+#' `subset`, missing-value exclusions, weights, and call-level offset. The
+#' stored formula object, including its environment, is used for every refit.
+#'
+#' For safety in version 0.1.0, the model's `data` argument must be a simple
+#' name that resolves to an ordinary object with class exactly `data.frame`.
+#' Columns must be unclassed atomic vectors or base factors. Active bindings,
+#' additional data or column classes, and every data-producing call -- including
+#' `subset()`, `transform()`, `within()`, and `get()` -- are rejected. Materialize
+#' such a call first (for example, `d <- subset(source, keep)`) and fit with
+#' `data = d`. Models fit with `model = FALSE` cannot be resampled because they
+#' do not retain the model frame needed to identify the observations actually
+#' used.
 #'
 #' Non-converged `glm` objects are rejected because their coefficients cannot
 #' support reliable claim evaluation. Bootstrap refits that do not converge are
@@ -201,7 +207,7 @@ resolve_model_direction <- function(x, direction) {
 
 resample_model_estimates <- function(model, term, method, iterations, seed) {
   prepared <- prepare_model_resampling(model)
-  n <- nrow(prepared$data)
+  n <- data_frame_nrow(prepared$data)
   if (n < 3L) stop("Model resampling requires at least three observations.", call. = FALSE)
   if (method == "bootstrap") {
     if (!is.numeric(iterations) || length(iterations) != 1L || is.na(iterations) ||
