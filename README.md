@@ -2,6 +2,8 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/sircalch/claimtestR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/sircalch/claimtestR/actions/workflows/R-CMD-check.yaml)
+[![Test coverage](https://github.com/sircalch/claimtestR/actions/workflows/test-coverage.yaml/badge.svg)](https://github.com/sircalch/claimtestR/actions/workflows/test-coverage.yaml)
+[![Codecov test coverage](https://codecov.io/gh/sircalch/claimtestR/graph/badge.svg)](https://app.codecov.io/gh/sircalch/claimtestR)
 <!-- badges: end -->
 
 `claimtestR` turns scientific claims into executable, inspectable assertions.
@@ -23,8 +25,7 @@ Scientific workflows also need to ask whether the conclusion still holds:
 
 ## Installation
 
-This is an early development version. Once the repository is published, install
-it with:
+Install the current development release from GitHub with:
 
 ```r
 # install.packages("remotes")

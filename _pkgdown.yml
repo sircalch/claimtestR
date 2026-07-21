@@ -1,0 +1,12 @@
+url: https://sircalch.github.io/claimtestR/
+
+template:
+  bootstrap: 5
+
+development:
+  mode: auto
+
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]

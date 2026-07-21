@@ -10,3 +10,6 @@
 ^CODE_OF_CONDUCT\.md$
 ^CONTRIBUTING\.md$
 ^ROADMAP\.md$
+^LICENSE\.md$
+^_pkgdown\.yml$
+^docs$
