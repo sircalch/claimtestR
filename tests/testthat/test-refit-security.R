@@ -207,6 +207,149 @@ test_that("custom S3 classes and methods are never dispatched for recovery", {
   expect_false(methods_called$subset)
 })
 
+test_that("custom S3 columns are rejected before any generic dispatch", {
+  method_names <- c(
+    "dim.probe", "length.probe", "names.probe", "is.na.probe",
+    "[.probe", "[[.probe", "as.data.frame.probe", "Ops.probe"
+  )
+  method_calls <- stats::setNames(integer(length(method_names)), method_names)
+  old_methods <- lapply(method_names, function(name) {
+    get0(name, envir = .GlobalEnv, inherits = FALSE)
+  })
+  method_existed <- vapply(
+    method_names, exists, logical(1), envir = .GlobalEnv, inherits = FALSE
+  )
+  on.exit({
+    for (index in seq_along(method_names)) {
+      name <- method_names[[index]]
+      if (method_existed[[index]]) {
+        assign(name, old_methods[[index]], envir = .GlobalEnv)
+      } else if (exists(name, envir = .GlobalEnv, inherits = FALSE)) {
+        rm(list = name, envir = .GlobalEnv)
+      }
+    }
+  }, add = TRUE)
+
+  model_data <- mtcars
+  model_data$probe <- structure(
+    rep(TRUE, nrow(model_data)), class = c("probe", "logical")
+  )
+  fit <- lm(mpg ~ wt, data = model_data)
+  for (name in method_names) {
+    assign(name, local({
+      method_name <- name
+      function(...) {
+        method_calls[[method_name]] <<- method_calls[[method_name]] + 1L
+        NULL
+      }
+    }), envir = .GlobalEnv)
+  }
+  method_calls[] <- 0L
+
+  expect_error(
+    expect_stable_direction(
+      fit, term = "wt", method = "bootstrap", iterations = 2
+    ),
+    "unclassed atomic columns or base factors"
+  )
+  expect_identical(unname(method_calls), rep(0L, length(method_names)))
+  expect_false(method_calls[["dim.probe"]] > 0L, info = "DIM_METHOD_CALLED")
+})
+
+test_that("only base atomic vectors and base factors pass column validation", {
+  safe_columns <- list(
+    numeric = c(1, 2),
+    integer = c(1L, 2L),
+    logical = c(TRUE, FALSE),
+    character = c("a", "b"),
+    factor = factor(c("a", "b")),
+    ordered = ordered(c("a", "b"))
+  )
+  expect_true(all(vapply(
+    safe_columns, claimtestR:::is_safe_data_column, logical(1)
+  )))
+
+  custom_factor <- factor(c("a", "b"))
+  class(custom_factor) <- c("probe", "factor")
+  dimensioned_factor <- factor(c("a", "b"))
+  attr(dimensioned_factor, "dim") <- c(2L, 1L)
+  custom_levels <- factor(c("a", "b"))
+  attr(custom_levels, "levels") <- structure(
+    attr(custom_levels, "levels", exact = TRUE), class = "probe"
+  )
+
+  expect_false(claimtestR:::is_safe_data_column(custom_factor))
+  expect_false(claimtestR:::is_safe_data_column(dimensioned_factor))
+  expect_false(claimtestR:::is_safe_data_column(custom_levels))
+})
+
+test_that("S4 columns are rejected before S4 method dispatch", {
+  class_name <- "claimtestR_s4_dispatch_probe"
+  class_environment <- environment()
+  method_calls <- new.env(parent = emptyenv())
+  method_calls$dim <- 0L
+  method_calls$length <- 0L
+  method_calls$subset <- 0L
+
+  methods::setClass(class_name, contains = "numeric", where = class_environment)
+  methods::setMethod(
+    "dim", signature(x = class_name),
+    function(x) {
+      method_calls$dim <- method_calls$dim + 1L
+      NULL
+    },
+    where = class_environment
+  )
+  methods::setMethod(
+    "length", signature(x = class_name),
+    function(x) {
+      method_calls$length <- method_calls$length + 1L
+      0L
+    },
+    where = class_environment
+  )
+  methods::setMethod(
+    "[", signature(x = class_name),
+    function(x, i, j, ..., drop = TRUE) {
+      method_calls$subset <- method_calls$subset + 1L
+      x
+    },
+    where = class_environment
+  )
+  on.exit({
+    methods::removeMethod("dim", signature(x = class_name), where = class_environment)
+    methods::removeMethod("length", signature(x = class_name), where = class_environment)
+    methods::removeMethod("[", signature(x = class_name), where = class_environment)
+    methods::removeClass(class_name, where = class_environment)
+  }, add = TRUE)
+
+  model_data <- mtcars
+  fit <- lm(mpg ~ wt, data = model_data)
+  probe <- methods::new(class_name, rep(1, nrow(model_data)))
+  columns <- lapply(seq_along(model_data), function(index) {
+    base::.subset2(model_data, index)
+  })
+  attr(columns, "names") <- attr(model_data, "names", exact = TRUE)
+  columns$probe <- probe
+  model_data <- structure(
+    columns,
+    row.names = attr(model_data, "row.names", exact = TRUE),
+    class = "data.frame"
+  )
+  global_names <- ls(.GlobalEnv, all.names = TRUE)
+
+  expect_error(
+    expect_stable_direction(
+      fit, term = "wt", method = "bootstrap", iterations = 2
+    ),
+    "unclassed atomic columns or base factors"
+  )
+  expect_identical(method_calls$dim, 0L)
+  expect_identical(method_calls$length, 0L)
+  expect_identical(method_calls$subset, 0L)
+  expect_identical(ls(.GlobalEnv, all.names = TRUE), global_names)
+})
+
 test_that("S4 and inaccessible data objects fail explicitly", {
   class_name <- "claimtestR_security_probe_frame"
   class_environment <- environment()

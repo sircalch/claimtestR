@@ -15,7 +15,8 @@
   after aligning to the observations retained by the fitted model.
 - Hardened pre-release data recovery: stability refits now accept only a simple
   name bound to an ordinary base data frame, reject active bindings and all
-  data-producing calls, and never dispatch coercion or subset methods.
+  data-producing calls, and reject custom S3 or S4 columns before generic
+  methods can be dispatched.
 - Refit from the formula object retained by `lm` or `glm`, so local formula and
   family symbols need not remain available after fitting or serialization.
 - Rejects non-converged `glm` objects and records failed or non-converged

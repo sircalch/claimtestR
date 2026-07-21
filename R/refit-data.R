@@ -122,10 +122,30 @@ data_frame_names <- function(data) {
 }
 
 is_safe_data_column <- function(column) {
-  if (!is.atomic(column) || !is.null(dim(column))) return(FALSE)
-  if (!is.object(column)) return(TRUE)
-  identical(class(column), "factor") ||
-    identical(class(column), c("ordered", "factor"))
+  if (isS4(column)) return(FALSE)
+  if (is.object(column)) return(is_safe_base_factor(column))
+  if (!typeof(column) %in% c(
+    "logical", "integer", "double", "complex", "character", "raw"
+  )) {
+    return(FALSE)
+  }
+  is.null(attr(column, "dim", exact = TRUE))
+}
+
+is_safe_base_factor <- function(column) {
+  column_class <- attr(column, "class", exact = TRUE)
+  if (!identical(column_class, "factor") &&
+      !identical(column_class, c("ordered", "factor"))) {
+    return(FALSE)
+  }
+  if (!identical(typeof(column), "integer") ||
+      !is.null(attr(column, "dim", exact = TRUE))) {
+    return(FALSE)
+  }
+  levels <- attr(column, "levels", exact = TRUE)
+  identical(typeof(levels), "character") &&
+    !is.object(levels) && !isS4(levels) &&
+    is.null(attr(levels, "dim", exact = TRUE))
 }
 
 find_binding_environment <- function(name, start_environment) {
