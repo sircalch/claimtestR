@@ -54,6 +54,23 @@ Counts, error classes, messages, and captured warnings are retained in the
 returned object's \code{details} field. An insufficient success proportion
 returns a failed \code{claim_test} rather than silently dropping refits.
 
+Model refits recover the original data named in the \code{lm} or \code{glm} call and
+align them to the observations retained by the fitted model. This allows
+transformations in the response or predictors to be reevaluated for each
+bootstrap or leave-one-out sample while preserving the fitted model's
+\code{subset}, missing-value exclusions, weights, and call-level offset. The
+stored formula object, including its environment, is used for every refit.
+
+For safety in version 0.1.0, the model's \code{data} argument must be a simple
+name that resolves to an ordinary object with class exactly \code{data.frame}.
+Columns must be unclassed atomic vectors or base factors. Active bindings,
+additional data or column classes, and every data-producing call -- including
+\code{subset()}, \code{transform()}, \code{within()}, and \code{get()} -- are rejected. Materialize
+such a call first (for example, \code{d <- subset(source, keep)}) and fit with
+\code{data = d}. Models fit with \code{model = FALSE} cannot be resampled because they
+do not retain the model frame needed to identify the observations actually
+used.
+
 Non-converged \code{glm} objects are rejected because their coefficients cannot
 support reliable claim evaluation. Bootstrap refits that do not converge are
 recorded as failed refits.
