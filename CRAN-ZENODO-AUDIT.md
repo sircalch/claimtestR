@@ -1,54 +1,42 @@
-# CRAN and Zenodo readiness audit
+# CRAN and Zenodo release record
 
-Audit date: 2026-08-07 UTC. Scope: local source tree only; no CRAN submission,
-GitHub push, Zenodo publication, or release was performed.
+Audit date: 2026-08-07 UTC. This document records the state of the public
+`claimtestR` 0.1.1 release. It is not part of the CRAN source bundle.
 
-## Findings
+## Immutable release artefacts
 
-1. The source tree is version 0.1.1 and has MIT licensing, documentation,
-   tests, a vignette, and a CRAN comments file.
-2. The previously built `claimtestR_0.1.0.tar.gz` differs from the current
-   source metadata: its `DESCRIPTION` includes the retired pkgdown URL
-   `https://sircalch.github.io/claimtestR/`, which returned 404 during the
-   earlier incoming-feasibility check. The current source `DESCRIPTION` no
-   longer contains that URL. Do not submit the old tarball.
-3. The local `R CMD check --as-cran` of the old tarball stopped because the
-   invoking R session did not use the project library containing `knitr`,
-   `rmarkdown`, and `testthat`. This was an environment issue, not a package
-   defect.
-4. The current source was rebuilt with its vignette, then checked from a local
-   temporary directory outside OneDrive to avoid a Windows file-lock during
-   staged installation. On Windows 11 with R 4.6.1, the resulting 0.1.1 tarball
-   passed `R CMD check --as-cran` with 0 errors, 0 warnings, and only the
-   expected new-submission NOTE.
-5. The maintainer field used a GitHub no-reply address. It has been updated in
-   the source tree to the corresponding author's institutional email and ORCID.
-6. Zenodo metadata was absent. A draft `.zenodo.json` now describes the
-   released software; it will be consumed only after the repository is enabled
-   in Zenodo and a future GitHub release is created.
+- GitHub release: `v0.1.1`, commit
+  `85cf6d74258d98c36daaf52fc9a63b28beaf8a86`.
+- Candidate source bundle: `claimtestR_0.1.1.tar.gz`.
+- SHA-256:
+  `33468D21865E847B253AFB4BF886292D01E168A801843B21650384F3B93AAE25`.
+- Zenodo version record: https://doi.org/10.5281/zenodo.21833717.
+- Zenodo file MD5: `c207859457f1fdfc439b573bb8b52dbb`.
 
-## Required gates before CRAN
+The older 0.1.0 tarball is not a CRAN candidate. Its distribution metadata
+contains a retired pkgdown URL.
 
-- Repeat `R CMD build .` and `R CMD check --as-cran` on a second platform,
-  preferably Linux, before submission.
-- Retain the current Windows result (0 errors, 0 warnings, one expected NOTE)
-  with the submission materials.
-- Check all URLs in the new tarball and the rendered vignette.
-- Update `cran-comments.md` with the actual platform, R version, date, and
-  final check result.
-- Do not reuse the public GitHub 0.1.0 archive; the CRAN candidate is version
-  0.1.1 because its distribution metadata differs.
-- Obtain the maintainer's explicit authorization immediately before upload.
+## Completed validation
 
-## Zenodo publication gate
+1. The source bundle was built with its vignette on Windows 11 using R 4.6.1.
+2. `R CMD check --as-cran` was run in a temporary directory outside OneDrive to
+   avoid Windows file locks. The result was 0 errors, 0 warnings, and one
+   expected NOTE for a new submission.
+3. GitHub Actions completed on Linux (R release, oldrel, and devel), Windows,
+   and macOS; pkgdown and coverage checks also completed successfully.
+4. The package has MIT licensing, documentation, tests, a vignette, and a
+   maintainer address at Universidad Estatal de Sonora.
+5. The Zenodo record is public and GitHub-Zenodo integration is enabled for
+   future releases. This record was uploaded manually because the integration
+   was enabled after `v0.1.1` had been created.
 
-- Enable `sircalch/claimtestR` in Zenodo's GitHub integration.
-- Review the imported creators, version, license, title, description, and
-  keywords before publication.
-- Create a GitHub release only after the CRAN-ready source and release notes
-  have been approved.
-- Record the version DOI and the concept DOI in `CITATION.cff`, README, package
-  documentation, and the future R Journal manuscript.
+## Remaining action
+
+Submit the immutable 0.1.1 source bundle through CRAN's official submission
+form once it reopens. As of 2026-08-07, CRAN has suspended submissions from
+2026-08-05 through 2026-08-19 for maintenance and team vacation. The
+maintainer must complete the confirmation received at the address recorded in
+`DESCRIPTION` after upload.
 
 ## Relationship to the article
 
