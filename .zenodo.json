@@ -1,0 +1,23 @@
+{
+  "title": "claimtestR: Test Statistical Claims as Executable Assertions",
+  "description": "claimtestR is an R package for representing scientific claims derived from statistical results as small, composable, and inspectable executable assertions. It supports claims about direction, uncertainty, practical magnitude, equivalence, stability, and model improvement in reproducible statistical workflows.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "MIT",
+  "language": "eng",
+  "keywords": [
+    "R",
+    "reproducibility",
+    "research software",
+    "statistical models",
+    "automated testing",
+    "executable claims"
+  ],
+  "creators": [
+    {
+      "name": "Monreal Hernández, Andrés",
+      "affiliation": "Universidad Estatal de Sonora",
+      "orcid": "0009-0009-1207-8597"
+    }
+  ]
+}

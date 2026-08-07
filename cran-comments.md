@@ -1,13 +1,13 @@
 ## R CMD check results
 
-Tested locally on Windows 11 with R 4.6.1 using `--as-cran`:
+Tested locally on Windows 11 with R 4.6.1 using `--as-cran` on 2026-08-07:
 
 ```text
 0 errors | 0 warnings | 1 note
 ```
 
-The note is the expected "New submission" note for a package that has not yet
-been published on CRAN.
+The only note is the expected "New submission" note for a package that has not
+yet been published on CRAN.
 
 ## Submission notes
 

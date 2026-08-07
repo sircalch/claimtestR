@@ -3,8 +3,8 @@ citHeader("To cite claimtestR in publications use:")
 bibentry(
   bibtype = "Manual",
   title = "claimtestR: Test Statistical Claims as Executable Assertions",
-  author = person("Andres", "Monreal"),
+  author = person("Andrés", "Monreal Hernández"),
   year = "2026",
-  note = "R package version 0.1.0",
+  note = "R package version 0.1.1",
   url = "https://github.com/sircalch/claimtestR"
 )
