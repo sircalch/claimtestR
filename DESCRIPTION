@@ -1,9 +1,10 @@
 Package: claimtestR
 Title: Test Statistical Claims as Executable Assertions
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: 
-    person("Andres", "Monreal", role = c("aut", "cre"),
-           email = "sircalch@users.noreply.github.com")
+    person("Andrés", "Monreal Hernández", role = c("aut", "cre"),
+           email = "andres.monreal@ues.mx",
+           comment = c(ORCID = "0009-0009-1207-8597"))
 Description: Provides small, composable assertions for testing scientific
     claims made from statistical results. Claims about direction, uncertainty,
     practical magnitude, equivalence, stability, and model improvement are

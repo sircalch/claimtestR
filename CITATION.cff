@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use claimtestR, please cite it as below."
+type: software
+title: "claimtestR: Test Statistical Claims as Executable Assertions"
+version: 0.1.1
+authors:
+  - family-names: "Monreal Hernández"
+    given-names: "Andrés"
+    orcid: "https://orcid.org/0009-0009-1207-8597"
+    affiliation: "Universidad Estatal de Sonora"
+license: MIT
+repository-code: "https://github.com/sircalch/claimtestR"

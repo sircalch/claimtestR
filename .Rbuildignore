@@ -1,6 +1,9 @@
 ^claimtestR\.Rproj$
 ^\.Rproj\.user$
 ^\.github$
+^\.zenodo\.json$
+^CITATION\.cff$
+^CRAN-ZENODO-AUDIT\.md$
 ^\.r-lib$
 ^check-output.*$
 ^claimtestR\.Rcheck$

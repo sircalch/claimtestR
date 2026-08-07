@@ -1,3 +1,11 @@
+# claimtestR 0.1.1
+
+## CRAN and archival metadata
+
+- Updated maintainer contact and ORCID metadata.
+- Added Zenodo and GitHub citation metadata for future versioned archives.
+- Updated the package citation to refer to version 0.1.1.
+
 # claimtestR 0.1.0
 
 ## First public core
