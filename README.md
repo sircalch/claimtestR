@@ -9,7 +9,7 @@
 It is designed for reproducible reports, analysis pipelines, and regression
 testing of statistical conclusions.
 
-The current release is **0.1.0**, the first public core API.
+The current release is **0.1.2**, retaining the first public core API.
 
 ## Why?
 
@@ -102,7 +102,7 @@ keeps exactly the rows used by the fitted model. This allows formulas such as
 terms to be reevaluated for each resample. Formula objects stored under local
 names are supported because refits use the formula retained by the model.
 
-For safety in version 0.1.0, `data` must be a simple name that points to an
+For safety in version 0.1.2, `data` must be a simple name that points to an
 ordinary base data frame whose columns are unclassed atomic vectors or base
 factors. Active bindings, additional data or column classes, and calls such as
 `subset()`, `transform()`, `within()`, or `get()` are rejected. Materialize a

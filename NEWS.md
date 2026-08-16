@@ -1,3 +1,10 @@
+# claimtestR 0.1.2
+
+## Release consistency
+
+- Updated package, citation, README, vignette, and user-facing validation text
+  to identify the current release consistently as version 0.1.2.
+
 # claimtestR 0.1.1
 
 ## CRAN and archival metadata

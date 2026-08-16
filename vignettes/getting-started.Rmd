@@ -155,7 +155,7 @@ transformed_stability <- expect_stable_direction(
 transformed_stability
 ```
 
-For stability refits in version 0.1.0, `data` must be a simple name that points
+For stability refits in version 0.1.2, `data` must be a simple name that points
 to an ordinary base data frame whose columns are unclassed atomic vectors or
 base factors. Active bindings, additional data or column classes, and all calls
 in `data` -- including `subset()`, `transform()`, `within()`, and `get()` -- are

@@ -84,7 +84,7 @@ recover_original_model_data <- function(model) {
     stop(
       "The model data object `", name,
       "` must have class exactly `data.frame` for safe stability refits. ",
-      "Objects with additional or custom classes are not supported in version 0.1.0.",
+      "Objects with additional or custom classes are not supported in version 0.1.2.",
       call. = FALSE
     )
   }
@@ -98,7 +98,7 @@ recover_original_model_data <- function(model) {
       "The model data object `", name,
       "` contains columns with additional classes or non-atomic structure: ",
       paste(unsafe_columns, collapse = ", "),
-      ". Stability refits in version 0.1.0 require unclassed atomic columns ",
+      ". Stability refits in version 0.1.2 require unclassed atomic columns ",
       "or base factors.",
       call. = FALSE
     )

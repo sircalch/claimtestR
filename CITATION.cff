@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use claimtestR, please cite it as below."
 type: software
 title: "claimtestR: Test Statistical Claims as Executable Assertions"
-version: 0.1.1
+version: 0.1.2
 authors:
   - family-names: "Monreal Hernández"
     given-names: "Andrés"

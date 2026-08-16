@@ -1,6 +1,6 @@
 ## R CMD check results
 
-Tested locally on Windows 11 with R 4.6.1 using `--as-cran` on 2026-08-07:
+Tested locally on Windows 11 with R 4.6.1 using `--as-cran` on 2026-08-16:
 
 ```text
 0 errors | 0 warnings | 1 note

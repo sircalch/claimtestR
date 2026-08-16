@@ -33,7 +33,7 @@
 #' `subset`, missing-value exclusions, weights, and call-level offset. The
 #' stored formula object, including its environment, is used for every refit.
 #'
-#' For safety in version 0.1.0, the model's `data` argument must be a simple
+#' For safety in version 0.1.2, the model's `data` argument must be a simple
 #' name that resolves to an ordinary object with class exactly `data.frame`.
 #' Columns must be unclassed atomic vectors or base factors. Active bindings,
 #' additional data or column classes, and every data-producing call -- including
