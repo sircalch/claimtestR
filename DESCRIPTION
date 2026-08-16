@@ -1,6 +1,6 @@
 Package: claimtestR
 Title: Test Statistical Claims as Executable Assertions
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: 
     person("Andrés", "Monreal Hernández", role = c("aut", "cre"),
            email = "andres.monreal@ues.mx",
