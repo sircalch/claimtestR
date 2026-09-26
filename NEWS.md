@@ -1,3 +1,17 @@
+# claimtestR (development version)
+
+## Inferential claims (issue #2)
+
+- New `expect_superior()` and `expect_noninferior()`: interval-based
+  superiority and non-inferiority claims with an analyst-supplied margin and
+  `direction = "higher"` or `"lower"`. Boundaries are defined mathematically,
+  with interval endpoints counted as included, and tested.
+- Documentation now states that `expect_positive_effect()`,
+  `expect_negative_effect()` and `expect_practical_effect()` evaluate the
+  point estimate only. It also relates `expect_equivalent()` to TOST: a level of
+  `1 - 2 * alpha` gives TOST at `alpha` (Schuirmann, 1987).
+- The vignette adds an end-to-end inferential example.
+
 # claimtestR 0.1.2
 
 ## Release consistency

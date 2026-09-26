@@ -4,6 +4,12 @@
 #' numeric scalar, a one-row result data frame, or a fitted model supported by
 #' `stats::coef()`.
 #'
+#' These are descriptive claims about the point estimate only; they do not
+#' account for uncertainty. For an inferential statement about direction, use
+#' [expect_interval_excludes()] with `value = 0` or [expect_superior()].
+#' `level` only affects intervals that are extracted and stored with the result;
+#' it does not change the decision.
+#'
 #' @param x A numeric estimate, result data frame, or fitted model.
 #' @param term Optional term name.
 #' @param estimate Optional estimate-column name for data frames.

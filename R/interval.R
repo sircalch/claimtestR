@@ -70,6 +70,10 @@ expect_interval_includes <- function(x, term = NULL, value = 0,
 
 #' Test whether an effect is practically meaningful
 #'
+#' Compares the point estimate with an analyst-defined minimum magnitude. The
+#' claim is descriptive and ignores uncertainty. To require the whole interval
+#' to exceed the threshold, use [expect_superior()] with `margin = minimum`.
+#'
 #' @inheritParams expect_positive_effect
 #' @param minimum Minimum effect magnitude, inclusive.
 #' @param direction Direction in which the threshold must be reached. The
@@ -108,7 +112,18 @@ expect_practical_effect <- function(x, minimum, term = NULL, estimate = NULL,
 #' Test statistical equivalence
 #'
 #' Uses the confidence-interval inclusion rule: equivalence passes only when
-#' the entire interval lies within the equivalence bounds.
+#' the entire interval lies within the equivalence bounds (endpoints included).
+#'
+#' With a two-sided interval at `level = 1 - 2 * alpha`, this rule is equivalent
+#' to the two one-sided tests (TOST) procedure at significance level `alpha`
+#' (Schuirmann, 1987). For example, `level = 0.90` gives TOST at 0.05. The
+#' default `level = 0.95` corresponds to TOST at 0.025 and is therefore more
+#' conservative. The analyst chooses both the bounds and the level.
+#'
+#' @references Schuirmann, D. J. (1987). A comparison of the two one-sided
+#'   tests procedure and the power approach for assessing the equivalence of
+#'   average bioavailability. *Journal of Pharmacokinetics and
+#'   Biopharmaceutics*, 15, 657--680. \doi{10.1007/BF01068419}
 #'
 #' @inheritParams expect_interval_excludes
 #' @param bounds Two finite numeric equivalence bounds in increasing order.

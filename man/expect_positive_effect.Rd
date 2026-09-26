@@ -27,6 +27,12 @@ numeric scalar, a one-row result data frame, or a fitted model supported by
 \code{stats::coef()}.
 }
 \details{
+These are descriptive claims about the point estimate only; they do not
+account for uncertainty. For an inferential statement about direction, use
+\code{\link[=expect_interval_excludes]{expect_interval_excludes()}} with \code{value = 0} or \code{\link[=expect_superior]{expect_superior()}}.
+\code{level} only affects intervals that are extracted and stored with the result;
+it does not change the decision.
+
 A non-converged \code{glm} object is rejected with an error because its
 coefficients cannot support reliable claim evaluation. claimtestR does not
 attempt to repair or reinterpret the model.

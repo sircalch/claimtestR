@@ -55,6 +55,32 @@ str(claims$results[[1]], max.level = 1)
 summary(claims)
 ```
 
+## Descriptive versus inferential claims
+
+`expect_negative_effect()` and `expect_practical_effect()` describe the point
+estimate only. Interval-based claims state the same conclusions with
+uncertainty taken into account. Here a smaller `wt` coefficient is "better"
+(a stronger decrease in fuel economy per unit of weight), so the claims use
+`direction = "lower"`. The margin and the confidence level are chosen by the
+analyst: a 90% interval corresponds to one-sided tests at 0.05.
+
+```{r inferential}
+inferential <- test_claims(
+  expect_superior(model, term = "wt", direction = "lower", level = 0.90),
+  expect_superior(model, term = "wt", margin = 2, direction = "lower",
+                  level = 0.90),
+  expect_noninferior(model, term = "wt", margin = 1, direction = "lower",
+                     level = 0.90)
+)
+
+inferential
+```
+
+Both superiority claims pass because the whole 90% interval, from about
+-4.95 to -2.80, lies below zero and also below -2. The second claim is
+stricter than `expect_practical_effect()` with the same threshold, which only
+compares the point estimate with -2.
+
 ## Report and export results
 
 `report_claims()` returns a Markdown table suitable for a Quarto or R Markdown
