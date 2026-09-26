@@ -1,6 +1,6 @@
 Package: claimtestR
 Title: Test Statistical Claims as Executable Assertions
-Version: 0.1.2
+Version: 0.1.2.9000
 Authors@R: 
     person("Andrés", "Monreal Hernández", role = c("aut", "cre"),
            email = "andres.monreal@ues.mx",
@@ -22,4 +22,4 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0

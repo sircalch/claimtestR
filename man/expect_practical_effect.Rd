@@ -31,7 +31,9 @@ default, \code{"absolute"}, ignores sign.}
 A \code{claim_test} object.
 }
 \description{
-Test whether an effect is practically meaningful
+Compares the point estimate with an analyst-defined minimum magnitude. The
+claim is descriptive and ignores uncertainty. To require the whole interval
+to exceed the threshold, use \code{\link[=expect_superior]{expect_superior()}} with \code{margin = minimum}.
 }
 \details{
 A non-converged \code{glm} object is rejected with an error because its

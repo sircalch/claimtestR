@@ -32,13 +32,25 @@ A \code{claim_test} object.
 }
 \description{
 Uses the confidence-interval inclusion rule: equivalence passes only when
-the entire interval lies within the equivalence bounds.
+the entire interval lies within the equivalence bounds (endpoints included).
 }
 \details{
+With a two-sided interval at \code{level = 1 - 2 * alpha}, this rule is equivalent
+to the two one-sided tests (TOST) procedure at significance level \code{alpha}
+(Schuirmann, 1987). For example, \code{level = 0.90} gives TOST at 0.05. The
+default \code{level = 0.95} corresponds to TOST at 0.025 and is therefore more
+conservative. The analyst chooses both the bounds and the level.
+
 A non-converged \code{glm} object is rejected with an error because its
 coefficients and intervals cannot support reliable claim evaluation.
 }
 \examples{
 results <- data.frame(estimate = 0.05, conf.low = -0.1, conf.high = 0.2)
 expect_equivalent(results, bounds = c(-0.25, 0.25))
+}
+\references{
+Schuirmann, D. J. (1987). A comparison of the two one-sided
+tests procedure and the power approach for assessing the equivalence of
+average bioavailability. \emph{Journal of Pharmacokinetics and
+Biopharmaceutics}, 15, 657--680. \doi{10.1007/BF01068419}
 }
